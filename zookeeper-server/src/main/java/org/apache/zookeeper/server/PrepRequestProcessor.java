@@ -137,6 +137,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
         try {
             while (true) {
                 ServerMetrics.getMetrics().PREP_PROCESSOR_QUEUE_SIZE.add(submittedRequests.size());
+                //从队列中拿出一个请求
                 Request request = submittedRequests.take();
                 ServerMetrics.getMetrics().PREP_PROCESSOR_QUEUE_TIME
                     .add(Time.currentElapsedTime() - request.prepQueueStartTime);
@@ -154,6 +155,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
 
                 request.prepStartTime = Time.currentElapsedTime();
 
+                //处理请求
                 pRequest(request);
             }
         } catch (Exception e) {
@@ -326,7 +328,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
      * @param request
      * @param record
      */
-    protected void pRequest2Txn(int type, long zxid, Request request, Record record, boolean deserialize) throws KeeperException, IOException, RequestProcessorException {
+    protected void  pRequest2Txn(int type, long zxid, Request request, Record record, boolean deserialize) throws KeeperException, IOException, RequestProcessorException {
         // 这是日志头
         if (request.getHdr() == null) {
             // sessionID、cxid、zxid、当前时间、请求类型
@@ -663,7 +665,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
     }
 
     private void pRequest2TxnCreate(int type, Request request, Record record, boolean deserialize) throws IOException, KeeperException {
-        // 把请求中的请求体，复制到record中，等待持久化
+        // 把请求中的请求体，序列化 到record日志记录 中，等待持久化
         if (deserialize) {
             ByteBufferInputStream.byteBuffer2Record(request.request, record);
         }
@@ -691,7 +693,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
         }
         // 节点类型（临时节点、顺序节点...） -s -e
         CreateMode createMode = CreateMode.fromFlag(flags);
-
+        //校验
         validateCreateRequest(path, createMode, request, ttl);
 
         // 当前节点的父节点 /xx
@@ -699,7 +701,12 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
 
         List<ACL> listACL = fixupACL(path, request.authInfo, acl);
 
-        // 拿到父节点的ChangeRecord，现在是创建一个节点，所以父节点上的属性也是需要改变的
+        // 拿到父节点的ChangeRecord，现在是创建一个节点，所以父节点上的属性(比如cversion )也是需要改变的
+        /**
+         * ChangeRecord:补偿异步带来的数据不一致问题  因为持久化到磁盘和修改datatree是在FinalRequestProcessor中完成的
+         * outstandingChangesForPath
+         *
+         */
         ChangeRecord parentRecord = getRecordForPath(parentPath);
 
         zks.checkACL(request.cnxn, parentRecord.acl, ZooDefs.Perms.CREATE, request.authInfo, path, listACL);
@@ -755,7 +762,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
             ephemeralOwner = request.sessionId;
         }
 
-        // 把父节点变更记录加入到outstandingChanges中
+        // 把父节点变更记录记录到到ChangeRecord 中
         StatPersisted s = DataTree.createStat(hdr.getZxid(), hdr.getTime(), ephemeralOwner);
         parentRecord = parentRecord.duplicate(request.getHdr().getZxid());
         parentRecord.childCount++;
@@ -772,6 +779,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
         nodeRecord.precalculatedDigest = precalculateDigest(
                 DigestOpCode.ADD, path, nodeRecord.data, s);
         setTxnDigest(request, nodeRecord.precalculatedDigest);
+        //添加到outstandingChanges中
         addChangeRecord(nodeRecord);
     }
 
@@ -809,9 +817,9 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
         // LOG.info("Prep>>> cxid = " + request.cxid + " type = " +
         // request.type + " id = 0x" + Long.toHexString(request.sessionId));
 
-        // 清空 日志头和日志内容，下面会重新进行赋值
+        // 清空 日志头和日志内容，如果是写请求 下面会重新进行赋值
         request.setHdr(null);  // TxnHeader
-        request.setTxn(null);  // Txn
+        request.setTxn(null);  // Record
 
         try {
             switch (request.type) {
@@ -821,6 +829,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
                 // 这里new出来的这个对象，只在pRequest2Txn方法中用了，该对象是Record的实现类，表示日志体
                 CreateRequest create2Request = new CreateRequest();
                 // 注意这里会先调用zks.getNextZxid()获取下一个zxid（自增）
+                    //每次服务器启动时会去持久化文件里读取最大的 zxid
                 pRequest2Txn(request.type, zks.getNextZxid(), request, create2Request, true);
                 break;
             case OpCode.createTTL:
@@ -992,7 +1001,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
         request.zxid = zks.getZxid();
         ServerMetrics.getMetrics().PREP_PROCESS_TIME.add(Time.currentElapsedTime() - request.prepStartTime);
 
-        // 调用下一个processor
+        // 调用下一个processor SyncRequestProcessor
         nextProcessor.processRequest(request);
     }
 
@@ -1102,7 +1111,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
 //                e.printStackTrace();
 //            }
 //        }
-
+        //添加到队列中
         submittedRequests.add(request);
         ServerMetrics.getMetrics().PREP_PROCESSOR_QUEUED.add(1);
     }

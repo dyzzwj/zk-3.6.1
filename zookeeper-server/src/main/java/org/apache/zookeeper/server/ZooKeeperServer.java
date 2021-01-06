@@ -713,7 +713,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         // PrepRequestProcessor-->SyncRequestProcessor-->FinalRequestProcessor
         // 1. 启动SyncRequestProcessor线程
         // 2. 启动PrepRequestProcessor线程
-
+//        PrepRequestProcessor -> SyncRequestProcessor -> FinalRequestProcessor
         RequestProcessor finalProcessor = new FinalRequestProcessor(this);
 
         RequestProcessor syncProcessor = new SyncRequestProcessor(this, finalProcessor);
@@ -1092,7 +1092,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     protected void setLocalSessionFlag(Request si) {
     }
 
-    public void submitRequest(Request si) {
+    public void  submitRequest(Request si) {
 
         enqueueRequest(si);
     }
@@ -1120,6 +1120,13 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         requestThrottler.submitRequest(si);
     }
 
+    /**
+     * 处理器执行器链 PrepRequestProcessor -> SyncRequestProcessor -> FinalRequestProcessor
+     *
+     * PrepRequestProcessor和SyncRequestProcessor是线程对象 各自维护着一个任务队列 由线程异步的执行
+     *
+     * @param si
+     */
     public void submitRequestNow(Request si) {
         if (firstProcessor == null) {
             synchronized (this) {
@@ -1147,6 +1154,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                 // 还没研究
                 setLocalSessionFlag(si);
 
+                //添加到任务队列中
                 firstProcessor.processRequest(si);
 
                 // 正在处理的请求+1

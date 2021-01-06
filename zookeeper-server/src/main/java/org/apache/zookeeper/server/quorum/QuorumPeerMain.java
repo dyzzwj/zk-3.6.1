@@ -87,6 +87,7 @@ public class QuorumPeerMain {
     public static void main(String[] args) {
         QuorumPeerMain main = new QuorumPeerMain();
         try {
+            //初始化并运行
             main.initializeAndRun(args);
         } catch (IllegalArgumentException e) {
             LOG.error("Invalid arguments, exiting abnormally", e);

@@ -64,6 +64,7 @@ public class ZooKeeperServerMain {
     public static void main(String[] args) {
         ZooKeeperServerMain main = new ZooKeeperServerMain();
         try {
+            //初始化并运行
             main.initializeAndRun(args);
         } catch (IllegalArgumentException e) {
             LOG.error("Invalid arguments, exiting abnormally", e);
@@ -166,7 +167,7 @@ public class ZooKeeperServerMain {
             if (config.getClientPortAddress() != null) {
                 // 默认拿到NIOServerCnxnFactory
                 cnxnFactory = ServerCnxnFactory.createFactory(); // NIOServerCnxnFactory
-                // ServerSocketChannel bind地址和端口 ,设置最大客户端连接限制数
+                // 创建ServerSocketChannel 绑定地址和端口 创建accept thread 向ServerChannelHandler注册accept事件 设置最大客户端连接限制数
                 cnxnFactory.configure(config.getClientPortAddress(), config.getMaxClientCnxns(), config.getClientPortListenBacklog(), false);
                 // 启动
                 cnxnFactory.startup(zkServer);
