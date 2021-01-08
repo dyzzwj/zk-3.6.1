@@ -147,7 +147,7 @@ public class RequestThrottler extends ZooKeeperCriticalThread {
                 }
 
                 // Throttling is disabled when maxRequests = 0
-                // 阈值10 ,, 11 closeSession
+                // 阈值
                 if (maxRequests > 0) {
                     while (!killed) {
                         if (dropStaleRequests && request.isStale()) {
@@ -158,11 +158,11 @@ public class RequestThrottler extends ZooKeeperCriticalThread {
                             request = null;
                             break;
                         }
-                        // 真正被处理的请求
+                        // 正在被处理的请求数量
                         if (zks.getInProcess() < maxRequests) {
                             break;
                         }
-                        // 超过了阈值则睡眠一会
+                        // 正在被处理的请求超过了阈值 则睡眠一会
                         throttleSleep(stallTime);
                     }
                 }
@@ -177,7 +177,7 @@ public class RequestThrottler extends ZooKeeperCriticalThread {
                     if (request.isStale()) {
                         ServerMetrics.getMetrics().STALE_REQUESTS.add(1);
                     }
-                    //真正的处理请求
+                    //真正处理请求
                     zks.submitRequestNow(request); //
                 }
             }

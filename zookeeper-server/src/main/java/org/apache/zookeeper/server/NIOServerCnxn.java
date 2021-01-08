@@ -179,9 +179,11 @@ public class NIOServerCnxn extends ServerCnxn {
         // 如果incomingBuffer已经满了，则表示packet的数据都已经读到incomingBuffer中了，则进行处理
         if (incomingBuffer.remaining() == 0) { // have we read length bytes?
             incomingBuffer.flip();
+            //记录接收到的packet数量和字节数
             packetReceived(4 + incomingBuffer.remaining());
 
-            // 初始化好了
+            //initialized：zk客户端和服务端的session有没有初始化完成
+            // 初始化完成？只有服务端处理完客户端的ConnectRequest请求 才认为连接初始化完成
             if (!initialized) {
                 // socket连接建立好了，还没有初始化，处理ConnectRequest
                 readConnectRequest();
@@ -329,10 +331,13 @@ public class NIOServerCnxn extends ServerCnxn {
 
                 return;
             }
+            //socket的前4个字节表示packet包的长度
             if (k.isReadable()) {
                 // 读就绪，把数据读到incomingBuffer中，
+                //incomingBuffer和lenBuffer指向的是同一片缓冲区（incomingBuffer初始值就是lenBuffer）
+                //读4个字节的数据到incomingBuffer，也即lenBuffer
+                //rc:表示读到的字节数
                 int rc = sock.read(incomingBuffer); // 45 一开始读4个字节数据，也就是读数据包的长度
-
                 //
                 if (rc < 0) {
                     // 没有读到数据则报错

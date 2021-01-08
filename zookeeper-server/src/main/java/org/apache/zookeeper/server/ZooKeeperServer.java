@@ -1117,6 +1117,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                 }
             }
         }
+        //requestThrottler：请求限流器 是一个线程对象 提交到队列中 线程轮训队列 ==> zookeeperServer并不直接处理请求
         requestThrottler.submitRequest(si);
     }
 

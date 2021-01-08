@@ -128,6 +128,7 @@ public class QuorumPeerMain {
 
         // Start and schedule the the purge task
         // 开启一个定时器，根据配置清空多余的日志和快照文件
+        //快照：内存中的DataTree序列化到磁盘
         DatadirCleanupManager purgeMgr = new DatadirCleanupManager(
             config.getDataDir(),
             config.getDataLogDir(),

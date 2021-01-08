@@ -183,6 +183,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
         public AcceptThread(ServerSocketChannel ss, InetSocketAddress addr, Set<SelectorThread> selectorThreads) throws IOException {
             super("NIOServerCxnFactory.AcceptThread:" + addr);
             this.acceptSocket = ss;
+            //向ServerSocketChannel注册accept事件
             this.acceptKey = acceptSocket.register(selector, SelectionKey.OP_ACCEPT);
             this.selectorThreads = Collections.unmodifiableList(new ArrayList<SelectorThread>(selectorThreads));
             selectorIterator = this.selectorThreads.iterator();
@@ -192,6 +193,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
             try {
                 while (!stopped && !acceptSocket.socket().isClosed()) {
                     try {
+                        //轮训accept事件
                         select();
                     } catch (RuntimeException e) {
                         LOG.warn("Ignoring unexpected runtime exception", e);
@@ -216,6 +218,8 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
 
         private void select() {
             try {
+                //阻塞
+                //在处理accept事件时会唤醒 doAccept -> selectorThread.addAcceptedConnection -> wakeupSelector
                 selector.select();
 
                 Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
@@ -273,6 +277,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
             boolean accepted = false;
             SocketChannel sc = null;
             try {
+                //接受连接
                 sc = acceptSocket.accept();
                 accepted = true;
                 if (limitTotalNumberOfCnxns()) {
@@ -297,6 +302,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
                 SelectorThread selectorThread = selectorIterator.next();
 
                 // 把当前sc添加到selectorThread的队列中，selectorThread会处理它自己的队列中的sc
+                //并且唤醒selectorThread
                 if (!selectorThread.addAcceptedConnection(sc)) {
                     throw new IOException("Unable to add connection to selector queue"
                                           + (stopped ? " (shutdown in progress)" : ""));
@@ -356,6 +362,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
             if (stopped || !acceptedQueue.offer(accepted)) {
                 return false;
             }
+            //因为SelectorThread.select()是阻塞的 因此有新的连接时唤醒selector
             wakeupSelector();
             return true;
         }
@@ -426,6 +433,8 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
 
         private void select() {
             try {
+                //阻塞
+                //accept线程提交任务给SelectorThread（当前线程）会唤醒
                 selector.select();
                 // 有就绪事件
                 Set<SelectionKey> selected = selector.selectedKeys();
@@ -479,7 +488,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
             // 续期
             touchCnxn(cnxn);
 
-            // 处理workRequest
+            // 处理workRequest 这里是把处理IO操作包装成任务进行提交 真正处理IO的是NIOServerCnxn.doIO
             workerPool.schedule(workRequest);
         }
 
@@ -704,15 +713,19 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
         }
 
         listenBacklog = backlog;
+        //创建ServerSocketChannel
         this.ss = ServerSocketChannel.open();
         ss.socket().setReuseAddress(true);
         LOG.info("binding to port {}", addr);
         if (listenBacklog == -1) {
+            //绑定端口
             ss.socket().bind(addr);
         } else {
             ss.socket().bind(addr, listenBacklog);
         }
+        //设置阻塞方式
         ss.configureBlocking(false);
+        //创建处理accept事件的线程 会注册accept事件
         acceptThread = new AcceptThread(ss, addr, selectorThreads);
     }
 
@@ -783,7 +796,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
         }
 
         // ensure thread is started once and only once
-        // 启动接收连接线程 SocketChannel
+        // 启动接收连接事件的线程 SocketChannel
         if (acceptThread.getState() == Thread.State.NEW) {
             acceptThread.start();
         }
@@ -794,8 +807,6 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
         }
     }
 
-    // 绑定端口，以便接收客户端请求
-    //
     @Override
     public void startup(ZooKeeperServer zks, boolean startServer) throws IOException, InterruptedException {
         // 1. 初始化WorkerService 线程池

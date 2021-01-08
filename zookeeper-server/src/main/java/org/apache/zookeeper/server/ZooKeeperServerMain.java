@@ -140,10 +140,10 @@ public class ZooKeeperServerMain {
 
 
             // create a file logger url from the command line args
-            // 日志目录、数据目录
+            // 日志目录、数据目录、快照和日志操作工具类
             txnLog = new FileTxnSnapLog(config.dataLogDir, config.dataDir);
 
-            //
+            //监控jvm是否暂停 jvm监控器
             JvmPauseMonitor jvmPauseMonitor = null;
             if (config.jvmPauseMonitorToRun) {
                 jvmPauseMonitor = new JvmPauseMonitor(config);
@@ -159,6 +159,8 @@ public class ZooKeeperServerMain {
             zkServer.registerServerShutdownHandler(new ZooKeeperServerShutdownHandler(shutdownLatch));
 
             // Start Admin server
+            //基于jetty启动一个管理台
+            //默认访问地址 http://localhost:8080/commonds
             adminServer = AdminServerFactory.createAdminServer();
             adminServer.setZooKeeperServer(zkServer);
             adminServer.start();
@@ -166,8 +168,10 @@ public class ZooKeeperServerMain {
             boolean needStartZKServer = true;
             if (config.getClientPortAddress() != null) {
                 // 默认拿到NIOServerCnxnFactory
+                //支持nio和netty两种模型
                 cnxnFactory = ServerCnxnFactory.createFactory(); // NIOServerCnxnFactory
-                // 创建ServerSocketChannel 绑定地址和端口 创建accept thread 向ServerChannelHandler注册accept事件 设置最大客户端连接限制数
+                // 创建ServerSocketChannel bind地址和端口 创建accept线程 ServerSocketChannel注册accept事件
+                // 设置最大客户端连接限制数
                 cnxnFactory.configure(config.getClientPortAddress(), config.getMaxClientCnxns(), config.getClientPortListenBacklog(), false);
                 // 启动
                 cnxnFactory.startup(zkServer);
