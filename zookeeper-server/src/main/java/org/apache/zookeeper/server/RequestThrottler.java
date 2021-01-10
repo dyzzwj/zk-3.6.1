@@ -238,6 +238,7 @@ public class RequestThrottler extends ZooKeeperCriticalThread {
             dropRequest(request);
         } else {
             // 添加到submittedRequests队列中
+            //requestThrottler是一个线程对象 会去队列中轮训执行任务
             submittedRequests.add(request);
         }
     }

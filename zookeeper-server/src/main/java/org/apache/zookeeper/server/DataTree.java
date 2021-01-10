@@ -152,16 +152,19 @@ public class DataTree {
     /**
      * This hashtable lists the paths of the ephemeral nodes of a session.
      */
+    //临时节点  某个sessionId下对于的临时节点
     private final Map<Long, HashSet<String>> ephemerals = new ConcurrentHashMap<Long, HashSet<String>>();
 
     /**
      * This set contains the paths of all container nodes
      */
+    //容器节点集合
     private final Set<String> containers = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
     /**
      * This set contains the paths of all ttl nodes
      */
+    //ttl节点集合
     private final Set<String> ttls = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
     private final ReferenceCountedACLCache aclCache = new ReferenceCountedACLCache();
@@ -471,6 +474,8 @@ public class DataTree {
         String childName = path.substring(lastSlash + 1); // 本节点
 
         StatPersisted stat = createStat(zxid, time, ephemeralOwner);
+
+        //和prep中修改ChangeRecord比较类似 只是这里修改的是DataTree
 
         // 拿到父节点
         DataNode parent = nodes.get(parentName);
@@ -892,6 +897,7 @@ public class DataTree {
     public volatile long lastProcessedZxid = 0;
 
     public ProcessTxnResult processTxn(TxnHeader header, Record txn, TxnDigest digest) {
+        //更新DataTree
         ProcessTxnResult result = processTxn(header, txn);
         compareDigest(header, txn, digest);
         return result;

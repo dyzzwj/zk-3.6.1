@@ -1876,8 +1876,11 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
 
     private ProcessTxnResult processTxnInDB(TxnHeader hdr, Record txn, TxnDigest digest) {
         if (hdr == null) {
+            //读请求
             return new ProcessTxnResult();
         } else {
+            //写请求
+            //更新DataTree
             return getZKDatabase().processTxn(hdr, txn, digest);
         }
     }

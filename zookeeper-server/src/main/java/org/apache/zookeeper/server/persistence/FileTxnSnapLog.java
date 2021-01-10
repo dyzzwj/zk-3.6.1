@@ -472,6 +472,9 @@ public class FileTxnSnapLog {
         ConcurrentHashMap<Long, Integer> sessionsWithTimeouts,
         boolean syncSnap) throws IOException {
         long lastZxid = dataTree.lastProcessedZxid;
+        /**
+         * 快照文件命名规则：snapshot. + 当前日志文件对应的最后一个zxid对应的16进制
+         */
         File snapshotFile = new File(snapDir, Util.makeSnapshotName(lastZxid));
         LOG.info("Snapshotting: 0x{} to {}", Long.toHexString(lastZxid), snapshotFile);
         try {

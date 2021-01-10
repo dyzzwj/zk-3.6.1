@@ -284,10 +284,14 @@ public class FileTxnLog implements TxnLog, Closeable {
         } else {
             lastZxidSeen = hdr.getZxid();
         }
+        /**
+         * 每次打快照的时候会将logStream赋值为null
+         */
         if (logStream == null) {
             LOG.info("Creating new log file: {}", Util.makeLogName(hdr.getZxid()));
 
             // 日志写入的文件
+            //文件名称：log. + 当前日志文件对应的第一个zxid对应的16进制
             logFileWrite = new File(logDir, Util.makeLogName(hdr.getZxid()));
             fos = new FileOutputStream(logFileWrite);
             logStream = new BufferedOutputStream(fos);
@@ -314,7 +318,7 @@ public class FileTxnLog implements TxnLog, Closeable {
         crc.update(buf, 0, buf.length);
         oa.writeLong(crc.getValue(), "txnEntryCRC");
 
-        // 将buf写入oa，对应的就是File中，但是还没有提交，在commit方法中才会提交
+        // 将buf写入oa，对应的就是File中，但是还没有提交（flush），在commit方法中才会提交
         Util.writeTxnBytes(oa, buf);
 
         return true;

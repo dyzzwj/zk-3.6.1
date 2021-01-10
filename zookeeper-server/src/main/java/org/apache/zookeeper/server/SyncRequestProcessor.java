@@ -126,7 +126,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
         long flushDelay = zks.getFlushDelay();
         long maxBatchSize = zks.getMaxBatchSize();
 
-        // 定时flush
+        //每隔一段时间进行flush flush的时候会更新上一次flush的时间
         if ((flushDelay > 0) && (getRemainingDelay() == 0)) {
             return true;
         }
@@ -145,7 +145,10 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
     }
 
     private boolean shouldSnapshot() {
-        int logCount = zks.getZKDatabase().getTxnCount();  // log1.output txncount   9
+        //txnCount:当前这个日志文件flush的写请求数量
+        //在调用zks.getZKDatabase().append(si)方法时会进行自增
+        int logCount = zks.getZKDatabase().getTxnCount();  // log1.output txncount
+        //logSize:整个zkServer的日志数量
         long logSize = zks.getZKDatabase().getTxnSize();  // log
         return (logCount > (snapCount / 2 + randRoll))
                || (snapSizeInBytes > 0 && logSize > (snapSizeInBytes / 2 + randSize));
@@ -156,6 +159,14 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
         randSize = Math.abs(ThreadLocalRandom.current().nextLong() % (snapSizeInBytes / 2));
     }
 
+    /**
+     * 1、（尽量）批量持久化request ==> 每个log日志文件大小不固定 == 每次打快照之后会生成一个新的log日志文件
+     *     == 控制生成新的日志文件的方式是在zks.getZKDatabase().rollLog()（打快照 ）中将LogStream赋值为null
+     *     ==每次zks.getZKDatabase().append(si)的时候会判断logStream是否为空
+     *     == append操作只是将数据写到缓冲区了 只有调用了flush才真正完成刷盘（持久化）
+     *
+     * 2、持久化DataTree（打快照）  == 创建线程去打快照
+     */
     @Override
     public void run() {
         try {
@@ -172,15 +183,15 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
 
                 long pollTime = Math.min(zks.getMaxWriteQueuePollTime(), getRemainingDelay());
 
-                // poll
-                // 移除并返回队列头部的元素，如果队列为空，则返回null
+                // prepProcessor会向queuedRequests队列中添加任务
+                // 移除并返回队列头部的元素，如果队列为空，则等待polltime时间 等待polltime后如果队列还为空 返回null
                 // 批量持久请求
                 Request si = queuedRequests.poll(pollTime, TimeUnit.MILLISECONDS);
 
                 if (si == null) {
                     // 如果从queuedRequests队列中没有获取到请求了，那么就把接收到的请求flush
                     /* We timed out looking for more writes to batch, go ahead and flush immediately */
-                    flush(); //
+                    flush(); //这里考虑的请求量较小的情况
                     // 移除并返回队列头部的元素，如果队列为空，则阻塞
                     si = queuedRequests.take();
                 }
@@ -196,6 +207,8 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                 // si表示Request，此时的Request中已经有日志头和日志体中了，可以持久化了
                 // append只是把request添加到stream中
                 // 只有当Request中的hdr为null时才返回false   读请求
+                //如果是读请求 这里返回false
+                //只有写请求才会apeend到logStream中
                 if (zks.getZKDatabase().append(si)) {
 
                     // 是否应该打快照了
@@ -203,6 +216,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                         resetSnapshotStats();
                         // roll the log
                         // 把之前没有持久化的Request先持久化了
+                        //this.logStream = null;  下一次append会生成新的log文件
                         zks.getZKDatabase().rollLog();  // logstrea=null
                         // take a snapshot
                         if (!snapThreadMutex.tryAcquire()) {
@@ -211,7 +225,21 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                             new ZooKeeperThread("Snapshot Thread") {
                                 public void run() {
                                     try {
-                                        // 持久    内存数据完成
+                                        // 持久  内存数据完成
+                                        /**
+                                         * //这里进行持久化操作会有一个问题（快照数据和request日志数据不一致）：
+                                         * 一个请求已经flush到request日志中了
+                                         *  但还没有被finalProcessorr处理（没有同步到(修改)DataTree） 此时将内存中的DataTree持久化到磁盘
+                                         *  但在下一次打快照时会
+                                         *  zk会在重启的时候加载DataTree和request日志
+                                         *  request日志命名规则：log. + 当前日志文件对应的第一个zxid对应的16进制
+                                         *  快照日志命名规则：snapshot. + 当前日志文件对应的最后一个zxid对应的16进制
+                                         *  加载逻辑：
+                                         *
+                                         *  优先加载zxid最大的快照文件（最新的快照文件）
+                                         *  再加载request日志文件名比最新快照文件大的request日志文件
+                                         */
+
                                         zks.takeSnapshot();
                                     } catch (Exception e) {
                                         LOG.warn("Unexpected exception", e);
@@ -223,6 +251,14 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                         }
                     }
                 } else if (toFlush.isEmpty()) {
+
+                    /**  toFlush中会有读请求和写请求
+                     * 如果是读请求 并且toFlush为空 那么可以直接调用finalProcessor处理读请求
+                     *  如果toFlush不为空，有可能有读请求 此时就不能直接调用finalProcessor，因为DataTree中的数据不是最新的
+                     *  toFlush相当于缓存
+                     *
+                     */
+
                     // toFlush是一个队列，表示需要进行持久化的Request，当Request被持久化了之后，就会把Request从toFlush中移除，直接调用nextProcessor
                     // 所以如果一个Request的hdr为null，表示不用进行持久化，
                     // 并且当toFlush队列中有值时不能先执行这个Request请求，得等toFlush中请求都执行完了之后才能执行
@@ -246,6 +282,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                 // 判断是否可以Flush了
                 // 当累积了maxBatchSize个请求，或者达到某个定时点了就进行持久化
                 if (shouldFlush()) {
+                    //刷新到磁盘
                     flush();
                 }
 
@@ -280,11 +317,13 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                 final Request i = this.toFlush.remove();
                 long latency = Time.currentElapsedTime() - i.syncQueueStartTime;
                 ServerMetrics.getMetrics().SYNC_PROCESSOR_QUEUE_AND_FLUSH_TIME.add(latency);
+                //调用下一个processor处理请求
                 this.nextProcessor.processRequest(i);
             }
             if (this.nextProcessor instanceof Flushable) {
                 ((Flushable) this.nextProcessor).flush();
             }
+            //更新上次flush的时间
             lastFlushTime = Time.currentElapsedTime();
         }
     }
