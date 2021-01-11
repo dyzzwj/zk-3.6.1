@@ -228,6 +228,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                                         // 持久  内存数据完成
                                         /**
                                          * //这里进行持久化操作会有一个问题（快照数据和request日志数据不一致）：
+                                         * （对DataTree）打快照是在修改Datatree之前进行
                                          * 一个请求已经flush到request日志中了
                                          *  但还没有被finalProcessorr处理（没有同步到(修改)DataTree） 此时将内存中的DataTree持久化到磁盘
                                          *  但在下一次打快照时会
@@ -237,7 +238,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                                          *  加载逻辑：
                                          *
                                          *  优先加载zxid最大的快照文件（最新的快照文件）
-                                         *  再加载request日志文件名比最新快照文件大的request日志文件
+                                         *  再加载request日志中zxid比最新快照文件大的记录
                                          */
 
                                         zks.takeSnapshot();

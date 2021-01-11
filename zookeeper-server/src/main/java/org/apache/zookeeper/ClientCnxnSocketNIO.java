@@ -96,6 +96,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 } else if (!initialized) {
                     // socket连接已经建立好了，还没有初始化
                     // 读取连接请求的结果
+                    //修改state状态
                     readConnectResult();
                     enableRead();
                     if (findSendablePacket(outgoingQueue, sendThread.tunnelAuthInProgress()) != null) {
@@ -273,7 +274,9 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
      */
     SocketChannel createSock() throws IOException {
         SocketChannel sock;
+        //创建SocketChannel
         sock = SocketChannel.open();
+        //非阻塞
         sock.configureBlocking(false);
         sock.socket().setSoLinger(false, -1);
         sock.socket().setTcpNoDelay(true);
@@ -289,7 +292,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     void registerAndConnect(SocketChannel sock, InetSocketAddress addr) throws IOException {
         // 注册一个CONNECT事件
         sockKey = sock.register(selector, SelectionKey.OP_CONNECT);
-        // 尝试去连接一下
+        // 尝试去连接一下 有可能连接成功 有可能没有连接成功 没有连接成功返回false
         boolean immediateConnect = sock.connect(addr);
         if (immediateConnect) {
             // 连接初始化
@@ -299,6 +302,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
 
     @Override
     void connect(InetSocketAddress addr) throws IOException {
+        //创建SocketChannel
         SocketChannel sock = createSock();
         try {
             registerAndConnect(sock, addr);
@@ -397,6 +401,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 }
             } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
                 // 当socket可以读或写数据时
+                //修改state状态为connected
                 // 当把一个packet发送给服务端后，会把这个packet添加到pendingQueue中
                 doIO(pendingQueue, cnxn);
             }
