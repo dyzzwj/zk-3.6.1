@@ -963,6 +963,8 @@ public class ClientCnxn {
                 return;
             }
 
+            //发送packet时会向pendingQueue添加该packet
+            //因此 接收到服务端的响应时 响应对应的packet应该是pendingQueue的一个packet
             Packet packet;
             synchronized (pendingQueue) {
                 // 客户端从服务端读到了数据，但是pendingQueue中没有对应的packet，那么表示有问题
@@ -1032,7 +1034,7 @@ public class ClientCnxn {
         /**
          * Setup session, previous watches, authentication.
          */
-        void primeConnection() throws IOException {
+        void  primeConnection() throws IOException {
             LOG.info(
                 "Socket connection established, initiating session, client: {}, server: {}",
                 clientCnxnSocket.getLocalSocketAddress(),
@@ -1667,14 +1669,15 @@ public class ClientCnxn {
             watchDeregistration);
         //
         synchronized (packet) {
-            // 客户端主线程进行等待，利用packet进行wait，唤醒会在
-
+            // 客户端主线程进行等待，利用packet进行wait，最多等待requestTimeout时长
             if (requestTimeout > 0) {
                 // Wait for request completion with timeout
                 waitForPacketFinish(r, packet);
             } else {
                 // Wait for request completion infinitely
+                //等待直到请求完成
                 while (!packet.finished) {
+                    //请求处理完成后（sendThread接收到响应后） 调用packet.notifyAll()
                     packet.wait();
                 }
             }

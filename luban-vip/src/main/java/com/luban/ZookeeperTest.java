@@ -13,7 +13,7 @@ public class ZookeeperTest {
         // watcher
 
         // 初始化一系列timeout(ClientCnxn)
-        // 启动SendThread(socket, 初始化， 读写事件, 发送时), EventTrhead
+        // 启动SendThread(socket, 初始化，注册读写事件, 发送时), EventTrhead
         // outgoingqueue packet pendingqueue
         ZooKeeper zooKeeper = new ZooKeeper("127.0.0.1:2181,127.0.0.1:2182,127.0.0.1:2183", 30 * 1000, new Watcher() {
             @Override
@@ -23,18 +23,25 @@ public class ZookeeperTest {
             }
         });
 
-
-
+        //代码执行到这里 zkClient与zkServer的socket连接并不一定建立成功
+        //建立socket了解, connecRequest初始化， 注册读写事件, 取outgoing queue 发送数据 由SendThread完成
 
 
         Stat stat = new Stat();
-//        zooKeeper.getData("/luban", new Watcher() {
-//            @Override
-//            public void process(WatchedEvent event) {
-//
-//                System.out.println("213");
-//            }
-//        }, stat);
+        /**
+         * getData()请求是同步执行的
+         * 将getData()包装成Packeat放到outgoing queue中后 主线程会进行阻塞（看执行代码）
+         *  虽然SendThread会取outgoing queue中元素进行发送 是异步的  但由于 主线程会等待 所以总体上是 同步的
+         *  等待：1、等待requestTimeout时长 直到返回错误
+         *       2、等待直到请求完成
+         */
+        zooKeeper.getData("/luban", new Watcher() {
+            @Override
+            public void process(WatchedEvent event) {
+
+                System.out.println("213");
+            }
+        }, stat);
 
         zooKeeper.addWatch("/luban", new Watcher() {
             @Override
@@ -45,7 +52,19 @@ public class ZookeeperTest {
 
         System.in.read();
 
-
+        String s = "123";
+        /**
+         * 异步
+         * 将getData()包装成Packeat放到outgoing queue中后 主线程不会进行阻塞 直接返回（看执行代码）
+         * 接下来就由SendThread异步的取Packet 发送Packet
+         *
+         */
+        zooKeeper.getData("/luban123", false, new AsyncCallback.DataCallback() {
+            @Override
+            public void processResult(int rc, String path, Object ctx, byte[] data, Stat stat) {
+                System.out.println(2);
+            }
+        }, s);
 
 
 

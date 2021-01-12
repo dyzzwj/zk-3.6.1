@@ -2399,7 +2399,7 @@ public class ZooKeeper implements AutoCloseable {
         GetDataResponse response = new GetDataResponse();
         //
 
-        //
+        //将request和request header包装成Packet对象 添加到outgoing queue， 然后阻塞当前线程
         ReplyHeader r = cnxn.submitRequest(h, request, response, wcb);
 
         if (r.getErr() != 0) {

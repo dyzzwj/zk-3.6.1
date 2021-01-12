@@ -128,7 +128,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 updateLastSend();
 
                 // If we already started writing p, p.bb will already exist
-                // 如果Packet的bb没有内容
+                // 如果Packet的byteBuffer没有内容
                 if (p.bb == null) {
                     if ((p.requestHeader != null)
                         && (p.requestHeader.getType() != OpCode.ping)
@@ -137,6 +137,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                         p.requestHeader.setXid(cnxn.getXid());
                     }
                     // 把Packet所表示的请求内容，放入到bb中
+                    //序列化Packet里的Request和RequestHeader到byteBuffer中 
                     p.createBB();
                 }
 
@@ -363,7 +364,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     }
 
     @Override
-    void doTransport(
+    void  doTransport(
         int waitTimeOut,
         Queue<Packet> pendingQueue,
         ClientCnxn cnxn) throws IOException, InterruptedException {
@@ -396,7 +397,8 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
 
                     updateSocketAddresses();
 
-                    // 连接初始化
+                    // 1、连接初始化 向zkServer发送ConnectRequest
+                    // 2、注册读写事件
                     sendThread.primeConnection();
                 }
             } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
