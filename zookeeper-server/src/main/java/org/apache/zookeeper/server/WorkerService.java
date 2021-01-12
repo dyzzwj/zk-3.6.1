@@ -207,15 +207,15 @@ public class WorkerService {
 
     public void start() {
         if (numWorkerThreads > 0) {
-            // false
             if (threadsAreAssignable) {
                 for (int i = 1; i <= numWorkerThreads; ++i) {
+                    //集群模式  可以让一个客户端的所有请求始终被同一个线程处理  绑定session和线程
                     // workers中有numWorkerThreads个线程池，每个线程池中只有一个线程
-                    // sessionId % numWorkerThreads。elngth ==  2
-                    // index =2
+                    // sessionId % numWorkerThreads.length ==  2
                     workers.add(Executors.newFixedThreadPool(1, new DaemonThreadFactory(threadNamePrefix, i)));
                 }
             } else {
+                //单机
                 // 一个线程池，这个线程池中有numWorkerThreads个线程
                 workers.add(Executors.newFixedThreadPool(numWorkerThreads, new DaemonThreadFactory(threadNamePrefix)));
             }

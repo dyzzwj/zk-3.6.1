@@ -12,10 +12,9 @@ public class ZookeeperTest {
         // 当客户端与服务端的连接断掉后就会重试去连其他的服务器地址
         // watcher
 
-        // 初始化timeout
+        // 初始化一系列timeout(ClientCnxn)
         // 启动SendThread(socket, 初始化， 读写事件, 发送时), EventTrhead
         // outgoingqueue packet pendingqueue
-
         ZooKeeper zooKeeper = new ZooKeeper("127.0.0.1:2181,127.0.0.1:2182,127.0.0.1:2183", 30 * 1000, new Watcher() {
             @Override
             public void process(WatchedEvent event) {

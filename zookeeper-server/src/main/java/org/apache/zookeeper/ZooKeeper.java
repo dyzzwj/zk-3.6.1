@@ -162,6 +162,7 @@ public class ZooKeeper implements AutoCloseable {
     @Deprecated
     public static final String SECURE_CLIENT = "zookeeper.client.secure";
 
+    //客户端socket连接上下文 发送数据 接受响应
     protected final ClientCnxn cnxn;    //
     private static final Logger LOG;
 
@@ -1063,6 +1064,7 @@ public class ZooKeeper implements AutoCloseable {
             // 使用什么技术去建立socket连接,nio还是netty,默认是nio，这里不会去建立socket连接，只是拿到一个ClientCnxnSocket对象
             getClientCnxnSocket(),
             canBeReadOnly);
+        //启动sendThread和eventThread
         cnxn.start(); //
     }
 
@@ -3459,7 +3461,7 @@ public class ZooKeeper implements AutoCloseable {
         try {
             Constructor<?> clientCxnConstructor = Class.forName(clientCnxnSocketName)
                                                        .getDeclaredConstructor(ZKClientConfig.class);
-            // 没有创建socket
+            // 还没有创建socket
             ClientCnxnSocket clientCxnSocket = (ClientCnxnSocket) clientCxnConstructor.newInstance(getClientConfig());
             return clientCxnSocket;
         } catch (Exception e) {

@@ -436,13 +436,14 @@ public class ClientCnxn {
         this.hostProvider = hostProvider;
         this.chrootPath = chrootPath;
 
-        //
-        connectTimeout = sessionTimeout / hostProvider.size(); // 3
+        //一次连接超时时间   超时后会有重试机制
+        connectTimeout = sessionTimeout / hostProvider.size(); // 除以zk集群数
         readTimeout = sessionTimeout * 2 / 3;
         readOnly = canBeReadOnly;
 
         // 发送数据 接收数据
         sendThread = new SendThread(clientCnxnSocket);
+        //处理watch监听 和 异步请求
         eventThread = new EventThread();
         this.clientConfig = zooKeeper.getClientConfig();
         initRequestTimeout();
@@ -1172,6 +1173,7 @@ public class ClientCnxn {
         private void startConnect(InetSocketAddress addr) throws IOException {
             // initializing it for new connection
             saslLoginFailed = false;
+            //如果不是第一次连接  即重试
             if (!isFirstConnect) {
                 try {
                     Thread.sleep(r.nextInt(1000));
@@ -1203,7 +1205,7 @@ public class ClientCnxn {
                     saslLoginFailed = true;
                 }
             }
-
+            //打印日志
             logStartConnect(addr);
 
             clientCnxnSocket.connect(addr);
@@ -1234,7 +1236,8 @@ public class ClientCnxn {
             while (state.isAlive()) {
                 try {
                     // 判断的是sockKey != null则表示已经连接了
-                    // 没有发送建立连接的这个动作
+                    // 赋值：sockKey = sock.register(selector, SelectionKey.OP_CONNECT);
+                    // 判断的是有没有发送建立连接的这个动作 而不是有没有建立连接
                     if (!clientCnxnSocket.isConnected()) {
                         // don't re-establish connection if we are closing
                         if (closing) {
@@ -1247,14 +1250,23 @@ public class ClientCnxn {
                             serverAddress = hostProvider.next(1000);
                         }
                         // 简历连接，包括两步
-                        // 1. 简历socket连接
-                        // 2. 连接初始化，primeConnection()
+                        // 1. 发送建立socket连接的动作
+                        // 2. 有可能连接初始化，primeConnection()
                         // 3. 这里没有发送任何数据，只是可能把socket连接建立好了   nio
                         startConnect(serverAddress);
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
 
                     // 已经连接成功了
+                    /**
+                     * 连接成功有两种可能：
+                     * 1、上面的startConnect(serverAddress);连接成功
+                     * 2、startConnect(serverAddress);连接不成功成功，
+                     * clientCnxnSocket.doTransport(to, pendingQueue, ClientCnxn.this);中处理OP_CONNECT事件
+                     *
+                     *  连接建立成功 对state状态进行修改
+                     *
+                     */
                     if (state.isConnected()) {
                         // determine whether we need to send an AuthFailed event.
                         // 不管sasl
@@ -1366,6 +1378,10 @@ public class ClientCnxn {
 
                         // At this point, there might still be new packets appended to outgoingQueue.
                         // they will be handled in next connection or cleared up if closed.
+                        /**
+                         * sockKey = null;
+                         */
+
                         cleanAndNotifyState();
                     }
                 }
