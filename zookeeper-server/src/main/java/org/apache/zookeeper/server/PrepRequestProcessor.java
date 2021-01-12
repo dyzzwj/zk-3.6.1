@@ -132,6 +132,12 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
         failCreate = b;
     }
 
+    /**
+     * 1、acl权限校验
+     * 2、生成并记录changeRecord
+     * 3、设置request的txn(后续的SyncRequestProcessor对request的持久化是根据request的txn完成的)
+     * 4、调用下一个requestProcessor
+     */
     @Override
     public void run() {
         try {
@@ -708,7 +714,9 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
          *
          */
         ChangeRecord parentRecord = getRecordForPath(parentPath);
-
+        /**
+         * 检查acl 如果不匹配acl，则直接结束对请求的处理
+         */
         zks.checkACL(request.cnxn, parentRecord.acl, ZooDefs.Perms.CREATE, request.authInfo, path, listACL);
 
          // create -s /xx/luban_
@@ -762,7 +770,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
             ephemeralOwner = request.sessionId;
         }
 
-        // 把父节点变更记录记录到到ChangeRecord 中
+        // 把父节点变更记录记录到ChangeRecord 中
         StatPersisted s = DataTree.createStat(hdr.getZxid(), hdr.getTime(), ephemeralOwner);
         parentRecord = parentRecord.duplicate(request.getHdr().getZxid());
         parentRecord.childCount++;
@@ -1001,7 +1009,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
         request.zxid = zks.getZxid();
         ServerMetrics.getMetrics().PREP_PROCESS_TIME.add(Time.currentElapsedTime() - request.prepStartTime);
 
-        // 调用下一个processor SyncRequestProcessor
+        // 调用下一个processor SyncRequestProcessor 继续处理请求
         nextProcessor.processRequest(request);
     }
 
@@ -1027,6 +1035,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
             throw new KeeperException.UnimplementedException();
         }
         try {
+
             EphemeralType.validateTTL(createMode, ttl);
         } catch (IllegalArgumentException e) {
             throw new BadArgumentsException(path);
