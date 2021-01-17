@@ -966,7 +966,8 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             // Possible since it's just deserialized from a packet on the wire.
             passwd = new byte[0];
         }
-        //
+        //session跟踪器 创建session
+        //SessionTrackerImpl
         long sessionId = sessionTracker.createSession(timeout);
 
         Random r = new Random(sessionId ^ superSecret);
@@ -1453,6 +1454,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         // session is setup
         cnxn.disableRecv();
 
+        //新的客户端第一次连接
         if (sessionId == 0) {
             // 创建一个session
             long id = createSession(cnxn, passwd, sessionTimeout);

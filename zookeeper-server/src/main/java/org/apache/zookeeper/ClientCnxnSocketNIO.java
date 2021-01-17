@@ -95,7 +95,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     readLength();
                 } else if (!initialized) {
                     // socket连接已经建立好了，还没有初始化
-                    // 读取连接请求的结果
+                    // 读取connectRequest请求的结果
                     //修改state状态
                     readConnectResult();
                     enableRead();
@@ -125,6 +125,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             Packet p = findSendablePacket(outgoingQueue, sendThread.tunnelAuthInProgress());
 
             if (p != null) {
+                //更新最后一次发送数据时间
                 updateLastSend();
 
                 // If we already started writing p, p.bb will already exist

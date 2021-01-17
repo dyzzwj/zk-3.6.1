@@ -262,6 +262,7 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements Sessi
     public long createSession(int sessionTimeout) {
         //  Map<SessionImpl>
         long sessionId = nextSessionId.getAndIncrement();
+        //跟踪session
         trackSession(sessionId, sessionTimeout);
         return sessionId;
     }

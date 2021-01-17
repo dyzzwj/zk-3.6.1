@@ -105,8 +105,15 @@ public class DataTree {
     private final NodeHashMap nodes;
 
     // 下面两个只是属性名字不同而已，都是WatchManager实例对象
+
+    /**
+     * 客户端getData()、exists()对应的事件
+     */
     private IWatchManager dataWatches;
 
+    /**
+     * 客户端 getChildren()对应的事件
+     */
     private IWatchManager childWatches;
 
     /** cached total size of paths and data for all DataNodes */
@@ -707,7 +714,7 @@ public class DataTree {
         nodeDataSize.addAndGet(getNodeSize(path, data) - getNodeSize(path, lastdata));
 
         updateWriteStat(path, dataBytes);
-        //
+        //触发监听器
         dataWatches.triggerWatch(path, EventType.NodeDataChanged);
         return s;
     }
@@ -749,6 +756,8 @@ public class DataTree {
             n.copyStat(stat);
             // watcher的ServerCnxn
             if (watcher != null) {
+                //WatchManager
+                //添加监听器
                 dataWatches.addWatch(path, watcher);
             }
             data = n.data;
@@ -987,7 +996,7 @@ public class DataTree {
             case OpCode.reconfig:
             case OpCode.setData:
                 SetDataTxn setDataTxn = (SetDataTxn) txn;
-                rc.path = setDataTxn.getPath();
+                rc.path = setDataTxn .getPath();
                 rc.stat = setData(
                     setDataTxn.getPath(),
                     setDataTxn.getData(),

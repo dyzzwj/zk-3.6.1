@@ -69,7 +69,7 @@ abstract class ClientCnxnSocket {
     protected long lastHeard;
 
     /**
-     * 最后一次接受数据时间
+     * 最后一次发送数据时间
      */
     protected long lastSend;
     protected long now;

@@ -286,7 +286,9 @@ public class ZooKeeper implements AutoCloseable {
         private final Map<String, Set<Watcher>> existWatches = new HashMap<String, Set<Watcher>>();
         private final Map<String, Set<Watcher>> childWatches = new HashMap<String, Set<Watcher>>();
         // 以下两个是一直有效的
+        //持久watch
         private final Map<String, Set<Watcher>> persistentWatches = new HashMap<String, Set<Watcher>>();
+        //持久递归watch
         private final Map<String, Set<Watcher>> persistentRecursiveWatches = new HashMap<String, Set<Watcher>>();
         private boolean disableAutoWatchReset;
 
@@ -592,13 +594,16 @@ public class ZooKeeper implements AutoCloseable {
             case NodeCreated:
                 synchronized (dataWatches) {
                     // 把从dataWatches移除出来的watcher添加到result中
-                    // 这里就是原生的客户端的watche会在事件触发完了之后消失，因为是remove
+                    // 这里就是原生的客户端的watche会在事件触发完了之后消失，因为是remove 一次性watch
+                    //把要执行的事件添加到result
                     addTo(dataWatches.remove(clientPath), result);
                 }
                 synchronized (existWatches) {
                     addTo(existWatches.remove(clientPath), result);
                 }
-
+                /**
+                 * 对持久节点和递归节点的事件操作
+                 */
                 addPersistentWatches(clientPath, result);
                 break;
 
@@ -2461,7 +2466,7 @@ public class ZooKeeper implements AutoCloseable {
         // 响应
         GetDataResponse response = new GetDataResponse();
 
-        // 发送数据
+        //添加到outgoing queue中 不过不会阻塞   多个异步调用是有顺序的
         cnxn.queuePacket(h, new ReplyHeader(), request, response, cb, clientPath, serverPath, ctx, wcb);
     }
 

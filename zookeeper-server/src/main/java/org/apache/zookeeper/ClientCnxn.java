@@ -515,7 +515,7 @@ public class ClientCnxn {
                 // materialize the watchers based on the event
                 // watcher是ZKWatchManager， 客户端Watch管理器
                 // 传入事件的状态、事件的类型、事件所对应的path
-                // 得到的watchers表示当前触发的event应该要触发watcher列表
+                // 得到的watchers表示当前触发的event应该要触发的watcher列表
                 watchers = watcher.materialize(event.getState(), event.getType(), event.getPath());
             } else {
                 watchers = new HashSet<Watcher>();
@@ -1368,7 +1368,10 @@ public class ClientCnxn {
                         to = Math.min(to, pingRwTimeout - idlePingRwServer);
                     }
 
-                    // 查询就绪事件，连接事件
+                    /**
+                     * 查询就绪事件，连接事件
+                     */
+
                     clientCnxnSocket.doTransport(to, pendingQueue, ClientCnxn.this);
                 } catch (Throwable e) {
                     if (closing) {
@@ -1512,7 +1515,7 @@ public class ClientCnxn {
             if (negotiatedSessionTimeout <= 0) {
                 state = States.CLOSED;
 
-                // eventThread
+                //客户端自己给自己触发一个事件
                 eventThread.queueEvent(new WatchedEvent(Watcher.Event.EventType.None, Watcher.Event.KeeperState.Expired, null));
                 eventThread.queueEventOfDeath();
 
