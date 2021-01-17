@@ -438,6 +438,7 @@ public class ClientCnxn {
 
         //一次连接超时时间   超时后会有重试机制
         connectTimeout = sessionTimeout / hostProvider.size(); // 除以zk集群数
+        //读取超时时间
         readTimeout = sessionTimeout * 2 / 3;
         readOnly = canBeReadOnly;
 
@@ -1006,6 +1007,9 @@ public class ClientCnxn {
 
                 LOG.debug("Reading reply session id: 0x{}, packet:: {}", Long.toHexString(sessionId), packet);
             } finally {
+                //1、注册watcher
+                //2、唤醒执行同步命令
+                //3、将异步任务添加到
                 finishPacket(packet);
             }
         }
@@ -1213,6 +1217,7 @@ public class ClientCnxn {
             //打印日志
             logStartConnect(addr);
 
+            //建立连接
             clientCnxnSocket.connect(addr);
         }
 
@@ -1252,6 +1257,7 @@ public class ClientCnxn {
                             serverAddress = rwServerAddress;
                             rwServerAddress = null;
                         } else {
+                            //循环host列表
                             serverAddress = hostProvider.next(1000);
                         }
                         // 简历连接，包括两步
@@ -1266,7 +1272,7 @@ public class ClientCnxn {
                     /**
                      * 连接成功有两种可能：
                      * 1、上面的startConnect(serverAddress);连接成功
-                     * 2、startConnect(serverAddress);连接不成功成功，
+                     * 2、startConnect(serverAddress);没有连接成功，
                      * clientCnxnSocket.doTransport(to, pendingQueue, ClientCnxn.this);中处理OP_CONNECT事件
                      *
                      *  连接建立成功 对state状态进行修改
@@ -1308,11 +1314,10 @@ public class ClientCnxn {
                         }
 
                         // socket连接成功后，就查看是否超过readTimeout时间了，还没有从服务端读到数据（ping请求的响应）
-                        // 读超时时间-读空闲时间
+                        // 读超时时间-读空闲时间    to<0表示session过期  已经readTimeout时长没有读取数据
                         to = readTimeout - clientCnxnSocket.getIdleRecv();
                     } else {
                         // 超过connectTimeout时间了，socket连接还没有建立成功
-                        //
                         to = connectTimeout - clientCnxnSocket.getIdleRecv();  // 30000
                     }
 
@@ -1680,7 +1685,7 @@ public class ClientCnxn {
                 // Wait for request completion infinitely
                 //等待直到请求完成
                 while (!packet.finished) {
-                    //请求处理完成后（sendThread接收到响应后） 调用packet.notifyAll()
+                    //请求处理完成后（sendThread接收到响应后） 调用packet.notifyAll()进行唤醒
                     packet.wait();
                 }
             }
@@ -1701,8 +1706,9 @@ public class ClientCnxn {
         // 还没有处理完成
         while (!packet.finished) {
             // 就等待一个requestTimeout时间
+            // 有可能请求处理完成后（sendThread接收到响应后） 调用packet.notifyAll()进行唤醒
             packet.wait(requestTimeout);
-            // 等待完这个时间后，如果请求还没有处理完，再看等待时间是否超过了requestTimeout，如果超过了则报错
+            // 等待完这个时间（或者比这个事件短 被notify）后，如果请求还没有处理完，再看等待时间是否超过了requestTimeout，如果超过了则报错
             if (!packet.finished && ((Time.currentElapsedTime() - waitStartTime) >= requestTimeout)) {
                 LOG.error("Timeout error occurred for the packet '{}'.", packet);
                 r.setErr(Code.REQUESTTIMEOUT.intValue());
@@ -1781,6 +1787,7 @@ public class ClientCnxn {
                 if (h.getType() == OpCode.closeSession) {
                     closing = true;
                 }
+                //添加到outgoing queue
                 outgoingQueue.add(packet);
             }
         }

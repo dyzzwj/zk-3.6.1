@@ -293,10 +293,12 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     void registerAndConnect(SocketChannel sock, InetSocketAddress addr) throws IOException {
         // 注册一个CONNECT事件
         sockKey = sock.register(selector, SelectionKey.OP_CONNECT);
-        // 尝试去连接一下 有可能连接成功 有可能没有连接成功 没有连接成功返回false
+        // 尝试去连接一下 有可能连接成功 有可能没有连接成功 没有连接成功返回false 不会阻塞
+        // 后面处理OP_CONNECT会再次调用sendThread.primeConnection();
         boolean immediateConnect = sock.connect(addr);
         if (immediateConnect) {
-            // 连接初始化
+            //1、 连接初始化 发送ConnectRequest请求
+            //2、注册读写事件
             sendThread.primeConnection();
         }
     }
@@ -306,6 +308,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         //创建SocketChannel
         SocketChannel sock = createSock();
         try {
+            //注册CONNECT事件并尝试一次建立连接
             registerAndConnect(sock, addr);
         } catch (IOException e) {
             LOG.error("Unable to open socket to {}", addr);

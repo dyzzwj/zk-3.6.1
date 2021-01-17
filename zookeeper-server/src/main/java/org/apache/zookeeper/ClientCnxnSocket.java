@@ -63,7 +63,14 @@ abstract class ClientCnxnSocket {
     protected ByteBuffer incomingBuffer = lenBuffer;
     protected final AtomicLong sentCount = new AtomicLong(0L);
     protected final AtomicLong recvCount = new AtomicLong(0L);
+    /**
+     *  最后一次接受数据时间
+     */
     protected long lastHeard;
+
+    /**
+     * 最后一次接受数据时间
+     */
     protected long lastSend;
     protected long now;
     protected ClientCnxn.SendThread sendThread;
