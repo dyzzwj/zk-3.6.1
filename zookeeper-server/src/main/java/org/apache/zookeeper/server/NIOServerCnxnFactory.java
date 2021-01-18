@@ -485,7 +485,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
 
             // 更新NIOServerCnxn上的时间，NIOServerCnxn也是一个对象，如果一直没有接收到数据（客户端一直没有发送数据和ping），
             // 就需要把这个对象删掉
-            // 续期
+            // session续期
             touchCnxn(cnxn);
 
             // 处理workRequest 这里是把处理IO操作包装成任务进行提交 真正处理IO的是NIOServerCnxn.doIO
@@ -874,6 +874,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
      * @param cnxn
      */
     public void touchCnxn(NIOServerCnxn cnxn) {
+        //更新过期时间点
         cnxnExpiryQueue.update(cnxn, cnxn.getSessionTimeout());
     }
 

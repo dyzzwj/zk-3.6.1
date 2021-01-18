@@ -159,7 +159,7 @@ public class DataTree {
     /**
      * This hashtable lists the paths of the ephemeral nodes of a session.
      */
-    //临时节点  某个sessionId下对于的临时节点
+    //临时节点  某个sessionId下对应的临时节点
     private final Map<Long, HashSet<String>> ephemerals = new ConcurrentHashMap<Long, HashSet<String>>();
 
     /**
@@ -222,6 +222,7 @@ public class DataTree {
     }
 
     public Collection<Long> getSessions() {
+        //datatree上所有有临时节点的sessionId
         return ephemerals.keySet();
     }
 
@@ -1012,6 +1013,9 @@ public class DataTree {
             case OpCode.closeSession:
                 long sessionId = header.getClientId();
                 if (txn != null) {
+                    /**
+                     * 移除session对应的临时节点
+                     */
                     killSession(sessionId, header.getZxid(),
                             ephemerals.remove(sessionId),
                             ((CloseSessionTxn) txn).getPaths2Delete());

@@ -244,6 +244,7 @@ public class NIOServerCnxn extends ServerCnxn {
             // Remove the buffers that we have sent
             ByteBuffer bb;
             while ((bb = outgoingBuffers.peek()) != null) {
+                //服务端关闭session的响应
                 if (bb == ServerCnxnFactory.closeConn) {
                     throw new CloseRequestException("close requested", DisconnectReason.CLIENT_CLOSED_CONNECTION);
                 }
@@ -337,8 +338,13 @@ public class NIOServerCnxn extends ServerCnxn {
                 //incomingBuffer和lenBuffer指向的是同一片缓冲区（incomingBuffer初始值就是lenBuffer）
                 //读4个字节的数据到incomingBuffer，也即lenBuffer
                 //rc:表示读到的字节数
+                //如果客户端异常关闭 会抛出IOException  会被捕获
                 int rc = sock.read(incomingBuffer); // 45 一开始读4个字节数据，也就是读数据包的长度
-                //
+
+
+
+                //读到客户端关闭socket连接
+                //客户端正常关闭
                 if (rc < 0) {
                     // 没有读到数据则报错
                     handleFailedRead();
@@ -397,6 +403,9 @@ public class NIOServerCnxn extends ServerCnxn {
             LOG.warn("Closing session 0x{}", Long.toHexString(sessionId), e);
             close(DisconnectReason.CLIENT_CNX_LIMIT);
         } catch (IOException e) {
+            /**
+             * 客户端异常关闭
+             */
             LOG.warn("Close of session 0x{}", Long.toHexString(sessionId), e);
             close(DisconnectReason.IO_EXCEPTION);
         }
