@@ -476,7 +476,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     }
 
     public enum ServerState {
-        LOOKING,   // 不知道自己的角色
+        LOOKING,   // 不知道自己的角色  观望状态
         FOLLOWING, //
         LEADING,
         OBSERVING
@@ -1185,7 +1185,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             re.setStackTrace(e.getStackTrace());
             throw re;
         }
-
+        //创建领导者选举策略  zk3.6只支持快速领导者选举
         this.electionAlg = createElectionAlgorithm(electionType);
     }
 
@@ -1411,6 +1411,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                     ServerMetrics.getMetrics().LOOKING_COUNT.add(1);
 
                     if (Boolean.getBoolean("readonlymode.enabled")) {
+                        //如果开启了只读模式   用的很少
                         LOG.info("Attempting to start ReadOnlyZooKeeperServer");
 
                         // Create read-only server but don't start it immediately

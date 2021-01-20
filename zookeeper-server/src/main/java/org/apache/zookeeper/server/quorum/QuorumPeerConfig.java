@@ -935,6 +935,7 @@ public class QuorumPeerConfig {
 
     public boolean isDistributed() {
         // standaloneEnabled=false，表示集群模式 或 参与者大于1
+        //quorumVerifier:集群验证相关
         return quorumVerifier != null && (!standaloneEnabled || quorumVerifier.getVotingMembers().size() > 1);
     }
 
