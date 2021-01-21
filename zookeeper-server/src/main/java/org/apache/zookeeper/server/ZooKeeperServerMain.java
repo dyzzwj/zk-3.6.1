@@ -140,7 +140,7 @@ public class ZooKeeperServerMain {
 
 
             // create a file logger url from the command line args
-            // 日志目录、数据目录、快照和日志操作工具类
+            // 快照和request日志操作工具类
             txnLog = new FileTxnSnapLog(config.dataLogDir, config.dataDir);
 
             //监控jvm是否暂停 jvm监控器
