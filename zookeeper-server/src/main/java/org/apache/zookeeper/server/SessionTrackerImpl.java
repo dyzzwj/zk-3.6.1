@@ -45,6 +45,10 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements Sessi
 
     private static final Logger LOG = LoggerFactory.getLogger(SessionTrackerImpl.class);
 
+
+    /**
+     * k:sessionId k:SessionImpl
+     */
     protected final ConcurrentHashMap<Long, SessionImpl> sessionsById = new ConcurrentHashMap<Long, SessionImpl>();
 
     private final ExpiryQueue<SessionImpl> sessionExpiryQueue;
@@ -157,6 +161,7 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements Sessi
                 // 0
                 long waitTime = sessionExpiryQueue.getWaitTime();  //
                 if (waitTime > 0) {
+                    //大于0表示还没到下个过期时间点
                     Thread.sleep(waitTime);
                     continue;
                 }
@@ -262,6 +267,7 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements Sessi
     public long createSession(int sessionTimeout) {
         //  Map<SessionImpl>
         long sessionId = nextSessionId.getAndIncrement();
+        //跟踪session
         trackSession(sessionId, sessionTimeout);
         return sessionId;
     }
@@ -300,7 +306,7 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements Sessi
                 + " session 0x" + Long.toHexString(id) + " " + sessionTimeout);
         }
 
-
+        //更新过期时间点
         updateSessionExpiry(session, sessionTimeout);
         return added;
     }
@@ -309,6 +315,8 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements Sessi
     // xratesessoin sessionsWithTimeout-- sessionsWithTimeout
 
     public synchronized boolean commitSession(long id, int sessionTimeout) {
+        //key sessionId   key:超时时间
+        //会对sessionsWithTimeout打快照
         return sessionsWithTimeout.put(id, sessionTimeout) == null;   //
     }
 

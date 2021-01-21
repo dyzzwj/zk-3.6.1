@@ -105,8 +105,15 @@ public class DataTree {
     private final NodeHashMap nodes;
 
     // 下面两个只是属性名字不同而已，都是WatchManager实例对象
+
+    /**
+     * 客户端getData()、exists()对应的事件
+     */
     private IWatchManager dataWatches;
 
+    /**
+     * 客户端 getChildren()对应的事件
+     */
     private IWatchManager childWatches;
 
     /** cached total size of paths and data for all DataNodes */
@@ -152,7 +159,7 @@ public class DataTree {
     /**
      * This hashtable lists the paths of the ephemeral nodes of a session.
      */
-    //临时节点  某个sessionId下对于的临时节点
+    //临时节点  某个sessionId下对应的临时节点
     private final Map<Long, HashSet<String>> ephemerals = new ConcurrentHashMap<Long, HashSet<String>>();
 
     /**
@@ -215,6 +222,7 @@ public class DataTree {
     }
 
     public Collection<Long> getSessions() {
+        //datatree上所有有临时节点的sessionId
         return ephemerals.keySet();
     }
 
@@ -707,7 +715,7 @@ public class DataTree {
         nodeDataSize.addAndGet(getNodeSize(path, data) - getNodeSize(path, lastdata));
 
         updateWriteStat(path, dataBytes);
-        //
+        //触发监听器
         dataWatches.triggerWatch(path, EventType.NodeDataChanged);
         return s;
     }
@@ -749,6 +757,8 @@ public class DataTree {
             n.copyStat(stat);
             // watcher的ServerCnxn
             if (watcher != null) {
+                //WatchManager
+                //添加监听器
                 dataWatches.addWatch(path, watcher);
             }
             data = n.data;
@@ -987,7 +997,7 @@ public class DataTree {
             case OpCode.reconfig:
             case OpCode.setData:
                 SetDataTxn setDataTxn = (SetDataTxn) txn;
-                rc.path = setDataTxn.getPath();
+                rc.path = setDataTxn .getPath();
                 rc.stat = setData(
                     setDataTxn.getPath(),
                     setDataTxn.getData(),
@@ -1003,6 +1013,9 @@ public class DataTree {
             case OpCode.closeSession:
                 long sessionId = header.getClientId();
                 if (txn != null) {
+                    /**
+                     * 移除session对应的临时节点
+                     */
                     killSession(sessionId, header.getZxid(),
                             ephemerals.remove(sessionId),
                             ((CloseSessionTxn) txn).getPaths2Delete());

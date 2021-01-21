@@ -43,9 +43,10 @@ public class WatchManager implements IWatchManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(WatchManager.class);
 
-    // path: Set<ServerCnxn>
+    // path: Set<ServerCnxn>  每个节点对应哪个客户端
     private final Map<String, Set<Watcher>> watchTable = new HashMap<>();
 
+    //ServerCnxn:Set<String> 每个客户端对应哪些节点
     private final Map<Watcher, Set<String>> watch2Paths = new HashMap<>();
 
     private final WatcherModeManager watcherModeManager = new WatcherModeManager();
@@ -133,11 +134,21 @@ public class WatchManager implements IWatchManager {
 
         Set<Watcher> watchers = new HashSet<>();
 
+
+        /**
+         * getPathParentIterator():判断当前路径中是否包含客户端监听的持久递归path 如果包含的话 就会进场递归遍历
+         * 1、例如客户端监听/luban节点，监听类型是PERSISTENT_RECURSIVE
+         * 有一个客户端 create /luban/zwj/aa
+         * 那么pathParentIterator.asIterable()的遍历顺序是/luban/zwj/aa -> /luban/zwj -> /luban -> / 判断这些path有没有监听
+         * 2、如果不是递归类型 那么仅仅会判断/luban/zwj/aa有没有watch，
+         *
+         */
         // 拿到当前path的各层父path进行递归
         // /luban123/bb/g1  // data（） children（）  watcher(递归)
         PathParentIterator pathParentIterator = getPathParentIterator(path);
         synchronized (this) {
             // 遍历路径
+
             for (String localPath : pathParentIterator.asIterable()) {
                 // 当前path对应的节点上有几个watcher(可能存在多个客户端，而且每个客户端对同一节点)
                 Set<Watcher> thisWatchers = watchTable.get(localPath);
@@ -161,9 +172,10 @@ public class WatchManager implements IWatchManager {
                     } else if (!pathParentIterator.atParentPath()) {
                         watchers.add(watcher);
                         if (!watcherMode.isPersistent()) {
+                            //非持久的watch
                             // 执行完移除
                             iterator.remove();
-                            Set<String> paths = watch2Paths.get(watcher);
+                            Set<String>  paths = watch2Paths.get(watcher);
                             if (paths != null) {
                                 paths.remove(localPath);
                             }
@@ -189,6 +201,7 @@ public class WatchManager implements IWatchManager {
                 continue;
             }
             // 执行Watcher，向客户端发送事件
+            //ServerCnxn
             w.process(e);
         }
 
@@ -336,8 +349,15 @@ public class WatchManager implements IWatchManager {
 
     private PathParentIterator getPathParentIterator(String path) {
         if (watcherModeManager.getRecursiveQty() == 0) {
+            /**
+             * 非递归
+             */
             return PathParentIterator.forPathOnly(path);
         }
+
+        /**
+         * 递归
+         */
         return PathParentIterator.forAll(path);
     }
 }

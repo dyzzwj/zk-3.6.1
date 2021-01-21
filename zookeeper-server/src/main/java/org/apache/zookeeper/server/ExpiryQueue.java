@@ -34,11 +34,17 @@ import org.apache.zookeeper.common.Time;
  */
 public class ExpiryQueue<E> {
 
+    /**
+     * k:SessionImpl   v:过期时间点
+     */
     private final ConcurrentHashMap<E, Long> elemMap = new ConcurrentHashMap<E, Long>();
     /**
      * The maximum number of buckets is equal to max timeout/expirationInterval,
      * so the expirationInterval should not be too small compared to the
      * max timeout that this expiry queue needs to maintain.
+     */
+    /**
+     * k:过期时间点 v：Set<SessionImpl>  某一个过期时间点对应的SessionImpl集合
      */
     private final ConcurrentHashMap<Long, Set<E>> expiryMap = new ConcurrentHashMap<Long, Set<E>>();
 
@@ -82,7 +88,7 @@ public class ExpiryQueue<E> {
      *                 changed, or null if unchanged
      */
     // SesessionImpl
-    public Long update(E elem, int timeout) {  // 30s
+    public Long  update(E elem, int timeout) {  // 30s
         // 之前保存的session的过期时间点
         Long prevExpiryTime = elemMap.get(elem);
         long now = Time.currentElapsedTime();

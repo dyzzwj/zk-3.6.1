@@ -153,12 +153,13 @@ public class QuorumCnxManager {
      */
     private AtomicInteger connectionThreadCnt = new AtomicInteger(0);
 
-    /*
+    /**
      * Mapping from Peer to Thread number
      * 为其他的每个节点单独开启一个线程SendWorker来发送数据
+     * key是serverId  SendWorker负责发送serverId相同的queueSendMap的队列中的数据
      */
     final ConcurrentHashMap<Long, SendWorker> senderWorkerMap;  //
-    // 当前节点需要发送给其他的数据（选票信息） key为其他节点serverId
+    // 当前节点需要发送给其他的数据（选票信息） key为其他节点serverId   value是CircularBlockingQueue（环形队列）
     final ConcurrentHashMap<Long, BlockingQueue<ByteBuffer>> queueSendMap;
     // put(2, mess)
     // put(3, mess)
@@ -166,7 +167,7 @@ public class QuorumCnxManager {
 
     /*
      * Reception queue
-     * 本节点接收到的其他节点发送过来的消息（选票）
+     * 本节点接收到的其他节点发送过来的消息（选票）  value是CircularBlockingQueue（环形队列）
      */
     public final BlockingQueue<Message> recvQueue;
 
@@ -637,6 +638,9 @@ public class QuorumCnxManager {
                 }
             }
 
+            /**
+             * sid : 发送数据给当前server的serverId
+             */
             if (sid == QuorumPeer.OBSERVER_ID) {
                 /*
                  * Choose identifier at random. We need a value to identify
@@ -670,6 +674,7 @@ public class QuorumCnxManager {
              * Now we start a new connection
              */
             LOG.debug("Create new connection to server: {}", sid);
+            //关闭socket
             closeSocket(sock);
 
             if (electionAddr != null) {
@@ -1097,6 +1102,7 @@ public class QuorumCnxManager {
                 // 创建serverSocket，等待连接
                 while ((!shutdown) && (portBindMaxRetry == 0 || numRetries < portBindMaxRetry)) {
                     try {
+                        //创建ServerSocket bio
                         serverSocket = createNewServerSocket();
                         LOG.info("{} is accepting connections now, my election bind port: {}", QuorumCnxManager.this.mySid, address.toString());
                         while (!shutdown) {

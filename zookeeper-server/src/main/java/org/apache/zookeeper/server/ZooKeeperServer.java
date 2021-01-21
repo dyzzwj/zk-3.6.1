@@ -490,6 +490,9 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         // Clean up dead sessions
         // 当前服务器上存在的临时节点对应的session
         List<Long> deadSessions = new ArrayList<>();
+        /**
+         * 遍历zkDb.getSessions：datatree上所有有临时节点的sessionId集合
+         */
         for (Long session : zkDb.getSessions()) {
             // 如果临时节点的session都不存在在getSessionWithTimeOuts中，那么这个session是不对的
             if (zkDb.getSessionWithTimeOuts().get(session) == null) {
@@ -966,7 +969,8 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             // Possible since it's just deserialized from a packet on the wire.
             passwd = new byte[0];
         }
-        //
+        //session跟踪器 创建session
+        //SessionTrackerImpl
         long sessionId = sessionTracker.createSession(timeout);
 
         Random r = new Random(sessionId ^ superSecret);
@@ -1453,6 +1457,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         // session is setup
         cnxn.disableRecv();
 
+        //新的客户端第一次连接
         if (sessionId == 0) {
             // 创建一个session
             long id = createSession(cnxn, passwd, sessionTimeout);
@@ -1865,11 +1870,15 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         if (opCode == OpCode.createSession) {
             if (hdr != null && txn instanceof CreateSessionTxn) {
                 CreateSessionTxn cst = (CreateSessionTxn) txn;
+                //
                 sessionTracker.commitSession(sessionId, cst.getTimeOut());
             } else if (request == null || !request.isLocalSession()) {
                 LOG.warn("*****>>>>> Got {} {}",  txn.getClass(), txn.toString());
             }
         } else if (opCode == OpCode.closeSession) {
+            /**
+             * 移除三个map
+             */
             sessionTracker.removeSession(sessionId);
         }
     }

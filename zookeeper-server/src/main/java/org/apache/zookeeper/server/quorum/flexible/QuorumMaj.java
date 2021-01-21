@@ -75,9 +75,11 @@ public class QuorumMaj implements QuorumVerifier {
     public QuorumMaj(Map<Long, QuorumServer> allMembers) {
         this.allMembers = allMembers;
         for (QuorumServer qs : allMembers.values()) {
+            //参与者（包括leader和follower）
             if (qs.type == LearnerType.PARTICIPANT) {
                 votingMembers.put(Long.valueOf(qs.id), qs);
             } else {
+                //非参与者
                 observingMembers.put(Long.valueOf(qs.id), qs);
             }
         }
