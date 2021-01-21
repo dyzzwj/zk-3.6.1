@@ -509,6 +509,9 @@ public class QuorumPeerConfig {
         // backward compatibility - dynamic configuration in the same file as
         // static configuration params see writeDynamicConfig()
         if (dynamicConfigFileStr == null) {
+            /**
+             * 创建QuorumVerifier的实现类  QuorumMaj 解析server.配置 生成 allMembers votingMembers observingMembers
+             */
             setupQuorumPeerConfig(zkProp, true);
 
             // reconfigEnabled开启了，所以把现在的配置先备份一下，因为后面可能会动态修改
@@ -935,7 +938,8 @@ public class QuorumPeerConfig {
 
     public boolean isDistributed() {
         // standaloneEnabled=false，表示集群模式 或 参与者大于1
-        //quorumVerifier:集群验证相关
+        //quorumVerifier:集群验证
+        //standaloneEnabled：单机模式 默认true
         return quorumVerifier != null && (!standaloneEnabled || quorumVerifier.getVotingMembers().size() > 1);
     }
 

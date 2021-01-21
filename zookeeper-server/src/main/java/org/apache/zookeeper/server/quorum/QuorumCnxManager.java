@@ -109,10 +109,10 @@ public class QuorumCnxManager {
 
     static final int PACKETMAXSIZE = 1024 * 512;
 
-    /*
-     * Negative counter for observer server ids.
-     */
 
+    /**
+     * 观察者服务器ID的负计数器
+     */
     private AtomicLong observerCounter = new AtomicLong(-1);
 
     /*
@@ -317,7 +317,7 @@ public class QuorumCnxManager {
         QuorumAuthServer authServer, QuorumAuthLearner authLearner, int socketTimeout, boolean listenOnAllIPs,
         int quorumCnxnThreadsSize, boolean quorumSaslAuthEnabled) {
 
-        // 当前节点接收的其他节点发送过来的信息
+        // 当前节点接收的其他节点发送过来的信息 循环队列
         this.recvQueue = new CircularBlockingQueue<>(RECV_CAPACITY);
         this.queueSendMap = new ConcurrentHashMap<>();
         this.senderWorkerMap = new ConcurrentHashMap<>();
@@ -340,8 +340,9 @@ public class QuorumCnxManager {
 
         initializeConnectionExecutor(mySid, quorumCnxnThreadsSize);
 
-        // Starts listener thread that waits for connection requests
-        // 初始化一个Listener, Listener负责监听socket连接
+        /**
+         * 初始化一个Listener, Listener负责监听socket连接
+         */
         listener = new Listener();
         listener.setName("QuorumPeerListener");
     }
@@ -388,7 +389,7 @@ public class QuorumCnxManager {
                 sock = SOCKET_FACTORY.get();
             }
             setSockOpts(sock);
-            // 建立socket连接
+            // 建立socket连接   阻塞
             sock.connect(electionAddr.getReachableOrOne(), cnxTO);
             if (sock instanceof SSLSocket) {
                 SSLSocket sslSock = (SSLSocket) sock;
@@ -412,6 +413,7 @@ public class QuorumCnxManager {
         }
 
         try {
+            //开始连接
             startConnection(sock, sid);
         } catch (IOException e) {
             LOG.error(
@@ -490,6 +492,9 @@ public class QuorumCnxManager {
             // understand the protocol version we use to avoid multiple partitions. see ZOOKEEPER-3720
             long protocolVersion = self.isMultiAddressEnabled() ? PROTOCOL_VERSION_V2 : PROTOCOL_VERSION_V1;
             dout.writeLong(protocolVersion);
+            /**
+             * 发送自己的id给对方
+             */
             dout.writeLong(self.getId());
 
             // now we send our election address. For the new protocol version, we can send multiple addresses.
@@ -658,7 +663,10 @@ public class QuorumCnxManager {
         // do authenticating learner
         authServer.authenticate(sock, din);
         //If wins the challenge, then close the new connection.
-        // 现在接收到了一个socket连接，如果发起socket连接的sid比我自己的小，则把socket挂掉，不能对方来连我，只能大的sid连小的sid
+        /**
+         * 现在接收到了一个socket连接，如果发起socket连接的sid比我自己的小，则把socket关闭，
+         * 只能大的sid连小的sid 即大的sid是小的sid的客户端（领导者选举端口）
+         */
         if (sid < self.getId()) {
             /*
              * This replica might still believe that the connection to sid is
@@ -678,7 +686,7 @@ public class QuorumCnxManager {
             closeSocket(sock);
 
             if (electionAddr != null) {
-                // 我主动去连sid
+                // 我主动去连小的sid
                 connectOne(sid, electionAddr);
             } else {
                 connectOne(sid);
@@ -759,10 +767,10 @@ public class QuorumCnxManager {
             return true;
         }
 
-        // we are doing connection initiation always asynchronously, since it is possible that
-        // the socket connection timeouts or the SSL handshake takes too long and don't want
-        // to keep the rest of the connections to wait
-        // 开一个线程去连接其他服务器
+
+        /**
+         * 创建一个线程去连接其他服务器
+         */
         return initiateConnectionAsync(electionAddr, sid);
     }
 
@@ -990,7 +998,10 @@ public class QuorumCnxManager {
                 }
 
                 CountDownLatch latch = new CountDownLatch(addresses.size());
-                // ListenerHandler是一个线程，当前节点的领导者选举端口，可以有多个，每个端口对应的一个ListenerHandler来负责处理数据
+                /**
+                 *  ListenerHandler是一个线程
+                 *  当前节点的领导者选举端口，可以有多个，每个端口对应的一个ListenerHandler来负责处理数据
+                 */
                 listenerHandlers = addresses.stream().map(address ->
                                 new ListenerHandler(address, self.shouldUsePortUnification(), self.isSslQuorum(), latch))
                         .collect(Collectors.toList());
@@ -1102,11 +1113,12 @@ public class QuorumCnxManager {
                 // 创建serverSocket，等待连接
                 while ((!shutdown) && (portBindMaxRetry == 0 || numRetries < portBindMaxRetry)) {
                     try {
-                        //创建ServerSocket bio
+                        //创建ServerSocket bio 绑定端口
                         serverSocket = createNewServerSocket();
                         LOG.info("{} is accepting connections now, my election bind port: {}", QuorumCnxManager.this.mySid, address.toString());
                         while (!shutdown) {
                             try {
+                                //接受请求
                                 client = serverSocket.accept();
                                 setSockOpts(client);
                                 LOG.info("Received connection request from {}", client.getRemoteSocketAddress());
@@ -1174,6 +1186,7 @@ public class QuorumCnxManager {
                 }
 
                 socket.setReuseAddress(true);
+                //绑定端口
                 socket.bind(address);
 
                 return socket;
