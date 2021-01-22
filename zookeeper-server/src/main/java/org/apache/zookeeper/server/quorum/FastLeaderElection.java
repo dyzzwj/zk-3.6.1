@@ -117,23 +117,23 @@ public class FastLeaderElection implements Election {
 
         /*
          * Proposed leader
-         */ long leader;   // sid
+         */ long leader;   // 本张选票当前投给了哪个节点
 
         /*
          * zxid of the proposed leader
-         */ long zxid;  // zxid
+         */ long zxid;  // 本张选票当前投给了的那个节点上的最大的zxid
 
         /*
          * Epoch
-         */ long electionEpoch;  //
+         */ long electionEpoch;  //发送这张选票的选举周期
 
         /*
          * current state of sender
-         */ QuorumPeer.ServerState state; // looking
+         */ QuorumPeer.ServerState state; // 发送选票的节点的状态
 
         /*
          * Address of sender
-         */ long sid;  // sid
+         */ long sid;  //发送这张的选票的sid
 
         QuorumVerifier qv;
         /*
@@ -526,7 +526,7 @@ public class FastLeaderElection implements Election {
             void process(ToSend m) {
                 ByteBuffer requestBuffer = buildMsg(m.state.ordinal(), m.leader, m.zxid, m.electionEpoch, m.peerEpoch, m.configData);
 
-
+                //把数据发送给sid
                 manager.toSend(m.sid, requestBuffer);
 
             }
@@ -577,7 +577,9 @@ public class FastLeaderElection implements Election {
 
     QuorumPeer self;
     Messenger messenger;
+    //electionEpoch :当前服务器进行第几次领导者选举 重启会归零
     AtomicLong logicalclock = new AtomicLong(); /* Election instance */
+
     long proposedLeader;   // sid id
     long proposedZxid;     // zxid
     long proposedEpoch;    // epoch
@@ -641,6 +643,7 @@ public class FastLeaderElection implements Election {
     public FastLeaderElection(QuorumPeer self, QuorumCnxManager manager) {
         this.stop = false;
         this.manager = manager;   // 这里是manager，后面还有个messenger，不要搞混了
+        //创建WorkerSender和WorkerReceiver  sendqueue recvqueue
         starter(self, manager);
     }
 
@@ -661,6 +664,7 @@ public class FastLeaderElection implements Election {
 
         sendqueue = new LinkedBlockingQueue<ToSend>();
         recvqueue = new LinkedBlockingQueue<Notification>();
+        //创建WorkerSender和WorkerReceiver
         this.messenger = new Messenger(manager);
     }
 
@@ -839,6 +843,7 @@ public class FastLeaderElection implements Election {
             proposedLeader,
             Long.toHexString(proposedZxid));
 
+        //当前节点投给了谁
         proposedLeader = leader;
         proposedZxid = zxid;
         proposedEpoch = epoch;
@@ -1018,7 +1023,7 @@ public class FastLeaderElection implements Election {
                      * Only proceed if the vote comes from a replica in the current or next
                      * voting view for a replica in the current or next voting view.
                      */
-                    switch (n.state) {
+                    switch (n.state) {//发送这张选票的服务器的状态
                     case LOOKING:
                         if (getInitLastLoggedZxid() == -1) {
                             LOG.debug("Ignoring notification as our zxid is -1");

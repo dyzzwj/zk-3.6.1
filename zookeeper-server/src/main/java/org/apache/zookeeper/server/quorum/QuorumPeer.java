@@ -1098,7 +1098,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         startLeaderElection();
 
         startJvmPauseMonitor();
-        // 启动线程，run
+        // 启动线程，执行run方法F
         super.start();
     }
 
@@ -1317,7 +1317,11 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             //
             QuorumCnxManager.Listener listener = qcm.listener;
             if (listener != null) {
-                // 启动Listener线程，负责监听其他服务器发过来的socket连接，如果能连接成功则进行相应的初始化
+                /**
+                 * 启动Listener线程，负责监听其他服务器发过来的socket连接，如果能连接成功则进行相应的初始化
+                 * 不会去主动和其他server节点建立socket连接
+                 *
+                 */
                 listener.start();
 
                 // 构造一个 应用层
