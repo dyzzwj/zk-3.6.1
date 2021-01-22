@@ -136,6 +136,7 @@ public class QuorumPeerMain {
             config.getPurgeInterval());
         purgeMgr.start();
 
+        //判断 是否是分布式
         if (args.length == 1 && config.isDistributed()) {
             // 以集群模式启动
             runFromConfig(config);
@@ -168,9 +169,13 @@ public class QuorumPeerMain {
             ServerCnxnFactory cnxnFactory = null;
             ServerCnxnFactory secureCnxnFactory = null;
 
-            // 绑定客户端端口
+            // 绑定与客户端通信端口
             if (config.getClientPortAddress() != null) {
                 cnxnFactory = ServerCnxnFactory.createFactory();
+                /**
+                 * 创建ServerSocketChannel 绑定端口 创建AcceptThread线程
+                 * 注册accept事件 设置最大连接数
+                 */
                 cnxnFactory.configure(config.getClientPortAddress(), config.getMaxClientCnxns(), config.getClientPortListenBacklog(), false);
             }
 

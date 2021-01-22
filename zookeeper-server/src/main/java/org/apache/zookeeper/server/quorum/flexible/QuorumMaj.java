@@ -34,9 +34,9 @@ import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
  */
 public class QuorumMaj implements QuorumVerifier {
 
-    // 所有服务器节点
+    // 所有服务器节点 包括leader follower observer
     private Map<Long, QuorumServer> allMembers = new HashMap<Long, QuorumServer>();
-    // 所有参与者节点
+    // 所有参与者节点（包括leader和follower）  在进行领导者选举的时候 各节点（不包括observer）的角色还没确定 称为参与者节点
     private Map<Long, QuorumServer> votingMembers = new HashMap<Long, QuorumServer>();
     // 所有观察者节点
     private Map<Long, QuorumServer> observingMembers = new HashMap<Long, QuorumServer>();
@@ -97,6 +97,7 @@ public class QuorumMaj implements QuorumVerifier {
                 QuorumServer qs = new QuorumServer(sid, value);
                 allMembers.put(Long.valueOf(sid), qs);
                 if (qs.type == LearnerType.PARTICIPANT) {
+                    //参与者节点非observer节点
                     votingMembers.put(Long.valueOf(sid), qs);
                 } else {
                     observingMembers.put(Long.valueOf(sid), qs);

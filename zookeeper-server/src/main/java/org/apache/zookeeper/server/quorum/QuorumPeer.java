@@ -201,10 +201,19 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
 
     public static class QuorumServer {
 
+        /**
+         * 表示 Flower 跟 Leader的通信端口，即服务端内部通信的端口
+         */
         public MultipleAddresses addr = new MultipleAddresses();
 
+        /**
+         * 领导者选举端口
+         */
         public MultipleAddresses electionAddr = new MultipleAddresses();
 
+        /**
+         * 客户端通信地址
+         */
         public InetSocketAddress clientAddr = null;
 
         public long id;
@@ -1088,6 +1097,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         startServerCnxnFactory();
 
         try {
+            //基于jetty启动一个控制台
             adminServer.start();
         } catch (AdminServerException e) {
             LOG.warn("Problem starting AdminServer", e);
@@ -1307,7 +1317,10 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             throw new UnsupportedOperationException("Election Algorithm 2 is not supported.");
         case 3:
             // Quorum表示集群中的过半节点， 创建一个集群中过半节点的管理者，管理着过半节点
-            QuorumCnxManager qcm = createCnxnManager();  // QuorumCnxManager对象，Listener对象
+            /**
+             * 创建QuorumCnxManager对象，Listener对象
+             */
+            QuorumCnxManager qcm = createCnxnManager();  //
             QuorumCnxManager oldQcm = qcmRef.getAndSet(qcm);
             if (oldQcm != null) {
                 LOG.warn("Clobbering already-set QuorumCnxManager (restarting leader election?)");
