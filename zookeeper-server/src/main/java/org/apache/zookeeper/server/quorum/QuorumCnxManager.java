@@ -159,7 +159,7 @@ public class QuorumCnxManager {
      * key是serverId  SendWorker负责发送serverId相同的queueSendMap的队列中的数据
      */
     final ConcurrentHashMap<Long, SendWorker> senderWorkerMap;  //
-    // 当前节点需要发送给其他的数据（选票信息） key为其他节点serverId   value是CircularBlockingQueue（环形队列）
+    // 当前节点需要发送给其他节点的数据（选票信息） key为其他节点serverId   value是CircularBlockingQueue（环形队列）
     final ConcurrentHashMap<Long, BlockingQueue<ByteBuffer>> queueSendMap;
     // put(2, mess)
     // put(3, mess)
@@ -727,7 +727,10 @@ public class QuorumCnxManager {
         if (this.mySid == sid) {
             // 发送给自己，
             b.position(0);
-            // 将ByteBuffer转化成Message,直接添加给recvQueue，没有经过网络
+            /**
+             *   将ByteBuffer转化成Message,直接添加给recvQueue
+             *   没有经过网络 没有先发送到queueSendMap -> socket -> RecvWoker -> recvQueue
+             */
             addToRecvQueue(new Message(b.duplicate(), sid));
             /*
              * Otherwise send to the corresponding thread to send.
@@ -843,15 +846,16 @@ public class QuorumCnxManager {
     boolean haveDelivered() {
         // 如果queueSendMap中的某个队列为空，则返回true
         for (BlockingQueue<ByteBuffer> queue : queueSendMap.values()) {
-            // {2: quee{]}
+            // {2: quee[]}
             // {3: quee[vote]}
             final int queueSize = queue.size();
             LOG.debug("Queue size: {}", queueSize);
             if (queueSize == 0) {
+                //表示我有选票已经发生出去了
                 return true;
             }
         }
-
+        //如果每个queue都有数据  表明与其他节点的socket连接可能未建立
         return false;
     }
 

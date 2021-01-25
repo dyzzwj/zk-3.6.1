@@ -97,7 +97,7 @@ public class FollowerRequestProcessor extends ZooKeeperCriticalThread implements
                 case OpCode.setACL:
                 case OpCode.multi:
                 case OpCode.check:
-                    // 同步发送这个请求
+                    // 写请求转发给leader
                     zks.getFollower().request(request);
                     break;
                 case OpCode.createSession:

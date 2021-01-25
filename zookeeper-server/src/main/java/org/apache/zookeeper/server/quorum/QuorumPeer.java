@@ -1515,12 +1515,15 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                         LOG.info("FOLLOWING");
 
                         setFollower(makeFollower(logFactory));
+                        //阻塞
                         follower.followLeader();
                     } catch (Exception e) {
                         LOG.warn("Unexpected exception", e);
                     } finally {
+                        //和leader的socket连接（数据同步、ping）断开后进入这里
                         follower.shutdown();
                         setFollower(null);
+                        //更新当前节点状态为looking
                         updateServerState();
                     }
                     break;
@@ -1531,15 +1534,20 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                     LOG.info("LEADING");
                     try {
                         setLeader(makeLeader(logFactory));
+                        //阻塞
                         leader.lead();   // RequestProcessor
                         setLeader(null);
                     } catch (Exception e) {
                         LOG.warn("Unexpected exception", e);
                     } finally {
+                        /**
+                         * 如果有一半的follower没有发送心跳 进入这路
+                         */
                         if (leader != null) {
                             leader.shutdown("Forcing shutdown");
                             setLeader(null);
                         }
+                        //更新当前节点状态 为looking
                         updateServerState();
                     }
                     break;

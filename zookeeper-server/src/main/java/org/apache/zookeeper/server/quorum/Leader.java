@@ -430,7 +430,7 @@ public class Leader extends LearnerMaster {
     // 负责记录正在进行两阶段提交的Proposal，key为zxid, 某个Proposal在发送给参与者之前，会记录在这个map中
     final ConcurrentMap<Long, Proposal> outstandingProposals = new ConcurrentHashMap<Long, Proposal>();
 
-    // toBeApplied队列是用来存储，某个Proposal可以commit了，但是暂时还未提交（Proposal添加到队列后，马上就会commit了）
+    // toBeApplied队列是用来存储，某个Proposal可以commit了（符合过半机制，但还未向follower发送commit请求），但是暂时还未提交（Proposal添加到队列后，马上就会commit了）
     // 在toBeApplied队列中的Proposal，就不会在outstandingProposals了
     private final ConcurrentLinkedQueue<Proposal> toBeApplied = new ConcurrentLinkedQueue<Proposal>();
 
@@ -807,6 +807,7 @@ public class Leader extends LearnerMaster {
 
                     if (!tickSkip && !syncedAckSet.hasAllQuorums()) {
                         // Lost quorum of last committed and/or last proposed
+                        //少于一半的follower返回ping的ack
                         // config, set shutdown flag
                         shutdownMessage = "Not sufficient followers synced, only synced with sids: [ "
                                           + syncedAckSet.ackSetsToString()
@@ -820,6 +821,11 @@ public class Leader extends LearnerMaster {
                 }
             }
             if (shutdownMessage != null) {
+                /**
+                 * 当有过半机器挂掉后 leader会先断开和其他follower的连接（断开连接可以让这些follower进入looking状态）
+                 *  然后leader会将自己的状态置为looking 加入到选举中
+                 *
+                 */
                 shutdown(shutdownMessage);
                 // leader goes in looking state
             }
@@ -958,7 +964,9 @@ public class Leader extends LearnerMaster {
         }
 
         // commit proposals in order
+        //顺序提交提议
         if (zxid != lastCommitted + 1) {
+            //如果zxid不等于上次提交的txid + 1
             LOG.warn(
                 "Commiting zxid 0x{} from {} noy first!",
                 Long.toHexString(zxid),
@@ -966,10 +974,17 @@ public class Leader extends LearnerMaster {
             LOG.warn("First is {}", (lastCommitted + 1));
         }
 
+        /**
+         * 记录提议的请求 符合过半机制后，生效之前会移除
+         */
         outstandingProposals.remove(zxid);
 
         if (p.request != null) {
-            // toBeApplied队列是用来存储，某个Proposal可以commit了，但是暂时还未提交（Proposal添加到队列后，马上就会commit了）
+            /**
+             * 记录待生效的请求，当FinalRequestProcessor处理完该请求后 会移除
+             */
+            // toBeApplied队列是用来存储，某个Proposal可以commit了（符合过半机制，但还未向follower发送commit请求），但是暂时还未提交（Proposal添加到队列后，马上就会commit了）
+            //当FinalRequestProcessor处理完该请求后 会移除
             toBeApplied.add(p);
         }
 
@@ -1002,8 +1017,8 @@ public class Leader extends LearnerMaster {
         } else {
             p.request.logLatency(ServerMetrics.getMetrics().QUORUM_ACK_LATENCY);
             // 两阶段提交中的第三步，向follower节点发送commit请求
-            commit(zxid); // 异步
-            // 向Observer节点通知当前已经可以提交的提议，提议里包含请求信息
+            commit(zxid); // 异步  告诉follower可以更新zkDatabase
+            // 向Observer节点通知当前已经可以提交的提议，提议里包含整个请求信息（数据）
             inform(p);
         }
         // Leader自己提交,这里只是把request添加到committedRequests队列中，由CommitRequestProcessor来处理该请求
@@ -1074,7 +1089,7 @@ public class Leader extends LearnerMaster {
         // 当前这个提议接收到的服务器发送过来的ack
         p.addAck(sid);   // sid
 
-        // 提交
+        // 尝试提交 验证过半机制
         boolean hasCommitted = tryToCommit(p, zxid, followerAddr);
 
         // If p is a reconfiguration, multiple other operations may be ready to be committed,
@@ -1222,6 +1237,7 @@ public class Leader extends LearnerMaster {
      * Create an inform packet and send it to all observers.
      */
     public void inform(Proposal proposal) {
+        //向observer节点发送整个请求的数据
         QuorumPacket qp = new QuorumPacket(Leader.INFORM, proposal.request.zxid, proposal.packet.getData(), null);
         sendObserverPacket(qp);
     }
@@ -1312,6 +1328,9 @@ public class Leader extends LearnerMaster {
 
             // 负责记录正在进行两阶段提交的Proposal，key为zxid
             // 在发送第一阶段提交之前会把当前提议记录在这个队列中
+            /**
+             * 记录提议的请求 符合过半机制后，生效之前会移除
+             */
             outstandingProposals.put(lastProposed, p);
 
             // 把提议Packet发送给所有Follower

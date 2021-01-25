@@ -678,6 +678,10 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         startSessionTracker();
 
         // 设置RequestProcessor chain
+        //集群模式下leader的实现：LeaderZooKeeperServer.setupRequestProcessors重写了该方法
+        //        follower的实现：LeaderZooKeeperServer.setupRequestProcessors
+        //        observer的实现：ObserverZooKeeperServer.setupRequestProcessors
+        //单机模式用的是默认实现
         setupRequestProcessors();
 
         // RequestThrottler是一个线程，用来进行限流，并调用firstRequestProcessor来处理请求

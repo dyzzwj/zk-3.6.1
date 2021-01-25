@@ -84,7 +84,7 @@ public class Follower extends Learner {
             self.setZabState(QuorumPeer.ZabState.DISCOVERY);
             QuorumServer leaderServer = findLeader();
             try {
-                // Follower节点向Leader节点建立socket连接
+                // Follower节点向Leader节点建立socket连接 数据同步和ping的socket连接
                 connectToLeader(leaderServer.addr, leaderServer.hostname);
 
                 connectionTime = System.currentTimeMillis();
@@ -142,7 +142,7 @@ public class Follower extends Learner {
                 QuorumPacket qp = new QuorumPacket();
                 while (this.isRunning()) {
                     readPacket(qp);
-                    // 处理
+                    // 处理leader发送的命令
                     processPacket(qp);
                 }
             } catch (Exception e) {
