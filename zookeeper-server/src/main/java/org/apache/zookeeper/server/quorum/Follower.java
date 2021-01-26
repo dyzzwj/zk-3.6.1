@@ -82,6 +82,7 @@ public class Follower extends Learner {
 
         try {
             self.setZabState(QuorumPeer.ZabState.DISCOVERY);
+            //寻找leader
             QuorumServer leaderServer = findLeader();
             try {
                 // Follower节点向Leader节点建立socket连接 数据同步和ping的socket连接

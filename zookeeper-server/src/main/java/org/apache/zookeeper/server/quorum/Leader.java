@@ -294,6 +294,7 @@ public class Leader extends LearnerMaster {
         }
 
         // 当前机器用来和Follower节点进行socket连接的地址
+        //绑定数据同步端口(ServerSocket) 供其他节点连接
         addresses.stream()
           .map(address -> createServerSocket(address, self.shouldUsePortUnification(), self.isSslQuorum()))
           .filter(Optional::isPresent)
