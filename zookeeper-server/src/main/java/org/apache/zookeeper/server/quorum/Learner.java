@@ -285,8 +285,9 @@ public class Learner {
         addresses.stream().map(address -> new LeaderConnector(address, socket, latch)).forEach(executor::submit);
 
         try {
+
             // 上面会开启线程去向leader节点建立socket连接，一旦建立成功会countdown
-            // 然后这里就会解阻塞
+            // 只有上面连接成功 这里才会解阻塞
             latch.await();
         } catch (InterruptedException e) {
             LOG.warn("Interrupted while trying to connect to Leader", e);
@@ -330,7 +331,9 @@ public class Learner {
         public void run() {
             try {
                 Thread.currentThread().setName("LeaderConnector-" + address);
-                Socket sock = connectToLeader();  //
+                //learner向leader建立socket连接
+                Socket sock = connectToLeader();
+                //learner执行完这行代码  leader会为当前learner创建一个LernerHandler
 
                 if (sock != null && sock.isConnected()) {
                     if (socket.compareAndSet(null, sock)) {
@@ -450,6 +453,7 @@ public class Learner {
         QuorumPacket qp = new QuorumPacket();
         qp.setType(pktType);
         // 从acceptedEpoch文件中拿到epoch  // 上一届  3,4,5,6,7，
+        //集群模式下zxid高32位代表epoch，低32位代表真正的zxid
         qp.setZxid(ZxidUtils.makeZxid(self.getAcceptedEpoch(), 0));
 
         /*

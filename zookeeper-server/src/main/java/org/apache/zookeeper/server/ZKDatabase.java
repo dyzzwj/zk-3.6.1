@@ -320,6 +320,7 @@ public class ZKDatabase {
         try {
             wl.lock();
             if (committedLog.size() > commitLogCount) {
+                //删除头
                 committedLog.remove();
                 minCommittedLog = committedLog.peek().packet.getZxid();
             }
