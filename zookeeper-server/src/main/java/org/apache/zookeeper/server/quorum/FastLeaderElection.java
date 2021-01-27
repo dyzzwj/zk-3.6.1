@@ -172,10 +172,12 @@ public class FastLeaderElection implements Election {
 
         /*
          * Proposed leader in the case of notification
+         * //被推选者
          */ long leader;
 
         /*
          * id contains the tag for acks, and zxid for notifications
+         * //被推选者的最大zxid
          */ long zxid;
 
         /*
@@ -184,10 +186,12 @@ public class FastLeaderElection implements Election {
 
         /*
          * Current state;
+         * 当前节点状态
          */ QuorumPeer.ServerState state;
 
         /*
          * Address of recipient
+         * 收件人sid
          */ long sid;
 
         /*
@@ -234,7 +238,7 @@ public class FastLeaderElection implements Election {
                 while (!stop) {
                     // Sleeps on receive
                     try {
-                        // 从QuorumCnxManager中的recvQueue队列中获取属性
+                        // 从QuorumCnxManager中的recvQueue队列中获取选票
                         response = manager.pollRecvQueue(3000, TimeUnit.MILLISECONDS);
                         if (response == null) {
                             continue;
@@ -424,6 +428,7 @@ public class FastLeaderElection implements Election {
                                 if ((ackstate == QuorumPeer.ServerState.LOOKING)
                                     && (n.electionEpoch < logicalclock.get())) {
                                     // 推选者的选举周期 比当前节点的小 给他发送一张当前节点的被推选者的选票
+                                    //当前节点投给谁
                                     Vote v = getVote();
                                     QuorumVerifier qv = self.getQuorumVerifier();
                                     ToSend notmsg = new ToSend(
@@ -431,8 +436,8 @@ public class FastLeaderElection implements Election {
                                         v.getId(),
                                         v.getZxid(),
                                         logicalclock.get(),
-                                        self.getPeerState(),
-                                        response.sid,
+                                        self.getPeerState(), //当前节点的状态
+                                        response.sid, //这张选票的推选者（发送方）   发给谁
                                         v.getPeerEpoch(),
                                         qv.toString().getBytes());
                                     sendqueue.offer(notmsg);
@@ -440,7 +445,7 @@ public class FastLeaderElection implements Election {
                             } else {
                                 // 接收选票的服务器（当前节点）的状态不是LOOKING
                                 /*
-                                 * If this server is not looking, but the one that sent the ack
+                                 * SendWorkerIf this server is not looking, but the one that sent the ack
                                  * is looking, then send back what it believes to be the leader.
                                  */
                                 Vote current = self.getCurrentVote();
@@ -529,7 +534,7 @@ public class FastLeaderElection implements Election {
             void process(ToSend m) {
                 ByteBuffer requestBuffer = buildMsg(m.state.ordinal(), m.leader, m.zxid, m.electionEpoch, m.peerEpoch, m.configData);
 
-                //把数据发送给sid
+                //把数据发送给queueSendMap中sid对应的queue
                 manager.toSend(m.sid, requestBuffer);
 
             }

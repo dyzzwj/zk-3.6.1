@@ -536,7 +536,7 @@ public class QuorumCnxManager {
             // socket连接建立好了之后
             // 初始化SendWorker、RecvWorker
             // 把SendWorker塞入senderWorkerMap中
-            // 针对当前的sid构造一个CircularBlockingQueue
+            // 针对当前socket连接对应的sid构造一个CircularBlockingQueue
             // 启动SendWorker、RecvWorker线程
             // SendWorker负责向sid发送数据，RecvWorker负责从sid接收数据
 
