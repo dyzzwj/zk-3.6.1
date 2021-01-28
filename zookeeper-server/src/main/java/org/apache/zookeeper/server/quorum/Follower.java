@@ -91,7 +91,7 @@ public class Follower extends Learner {
                 connectionTime = System.currentTimeMillis();
 
                 // 向Leader节点发送FOLLOWERINFO数据
-                // 并且得到当前集群统一的epoch
+                // 并且得到当前集群统一的epoch   会阻塞
                 long newEpochZxid = registerWithLeader(Leader.FOLLOWERINFO);
 
                 if (self.isReconfigStateChange()) {

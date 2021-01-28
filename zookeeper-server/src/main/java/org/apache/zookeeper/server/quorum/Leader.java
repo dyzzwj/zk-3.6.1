@@ -626,7 +626,7 @@ public class Leader extends LearnerMaster {
              *  leader节点等待epoch统一，这个过程会阻塞
              *  LearnerHandler#run()中 会接受其他learner的epoch
              *  只有当接收到的learner的epoch的数量大于一半  learnerHandler线程和当前线程才会解阻塞
-             *
+             *  leader调用这个方法 一方面是要等 另一方面leader也算超过一半节点中的一个
              */
             long epoch = getEpochToPropose(self.getId(), self.getAcceptedEpoch());
 
@@ -694,6 +694,9 @@ public class Leader extends LearnerMaster {
             // 因为在上面只是leader接收到了超过一半节点的epoch，最终选择出来了一个epoch
             // 但是这个epoch还没有被超过一半的节点得到确认
             // 这个过程也会阻塞
+            //每个learnHandler都会去调用这个方法 等待各自的learn返回epochAck，当超过一半的leanrer返回epochAck后
+            //这里会解阻塞 此时表明整个集群的epoch真正统一
+            //leader调用这个方法 一方面是要等 另一方面leader也算超过一半节点中的一个
             waitForEpochAck(self.getId(), leaderStateSummary);
 
             // 只要超过一半的节点都确认了epoch，那么这个epoch就是最终的epoch，设置到currentEpoch文件中
@@ -705,6 +708,8 @@ public class Leader extends LearnerMaster {
 
             try {
                 // 阻塞等待超过一半的节点和leader节点完成了数据同步，并发送一个ack
+                //LearnerHandler也会调用这个方法和各自的learner进行数据同步 当超过一半的节点完成数据同步 解阻塞
+                //leader调用这个方法 一方面是要等 另一方面leader也算超过一半节点中的一个
                 waitForNewLeaderAck(self.getId(), zk.getZxid());
             } catch (InterruptedException e) {
                 shutdown("Waiting for a quorum of followers, only synced with sids: [ "
