@@ -269,6 +269,10 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                     // flushes (writes), then just pass this to the next
                     // processor
                     if (nextProcessor != null) {
+                        /**
+                         * 集群模式下nextProcessor为AckRequestProcessor
+                         * 单机模式下 nextProcessor为FinalRequestProcesor
+                         */
                         nextProcessor.processRequest(si);
                         if (nextProcessor instanceof Flushable) {
                             ((Flushable) nextProcessor).flush();
