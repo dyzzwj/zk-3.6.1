@@ -616,11 +616,18 @@ public class Leader extends LearnerMaster {
             // new followers.
             // 单独开启一个线程去接收learner发过来的socket连接，
             // 只要leader不shutdown，它就不会停止，因为要等待新的learner节点连接
-            // 这里会创建LearnerHandler线程
+            // 这里会创建LearnerHandler线程 监听数据同步端口 负责数据同步、接受其他learner的ping和ack
             cnxAcceptor = new LearnerCnxAcceptor();
             cnxAcceptor.start();
 
-            // leader节点等待epoch统一，这个过程会阻塞
+
+            /**
+             * 集群同步的第一步 就是同步epoch
+             *  leader节点等待epoch统一，这个过程会阻塞
+             *  LearnerHandler#run()中 会接受其他learner的epoch
+             *  只有当接收到的learner的epoch的数量大于一半  learnerHandler线程和当前线程才会解阻塞
+             *
+             */
             long epoch = getEpochToPropose(self.getId(), self.getAcceptedEpoch());
 
             // 当走到这里，表示集群中大部分机器的epoch已经一样了，则这是本届的起始zxid
