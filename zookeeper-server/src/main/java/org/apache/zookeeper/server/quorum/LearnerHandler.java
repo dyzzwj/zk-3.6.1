@@ -936,11 +936,12 @@ public class LearnerHandler extends ZooKeeperThread {
                 needSnap = false;
             } else if ((maxCommittedLog >= peerLastZxid) && (minCommittedLog <= peerLastZxid)) {
                 // 如果 committedLog队列中的最大的zxid >=  Learner的最新zxid >= committedLog队列中的最小的zxid
-                // 那就只要把committedLog队列中的一部分CommittedLog发送给Learner即可
+                // 那就只要把committedLog队列中的peerLastZxid到maxCommittedLog这部分的CommittedLog发送给Learner即可
 
                 // Follower is within commitLog range
                 LOG.info("Using committedLog for peer sid: {}", getSid());
                 Iterator<Proposal> itr = db.getCommittedLog().iterator();
+                //把要发送的数据添加到队列中
                 currentZxid = queueCommittedProposals(itr, peerLastZxid, null, maxCommittedLog);
                 needSnap = false;
             } else if (peerLastZxid < minCommittedLog && txnLogSyncEnabled) {
@@ -953,7 +954,7 @@ public class LearnerHandler extends ZooKeeperThread {
                 // This method can return empty iterator if the requested zxid
                 // is older than on-disk txnlog
                 // peerLastZxid是follower上最大的zxid
-                // 从db上拿到大于peerLastZxid的Proposal
+                // 从request log上拿到大于peerLastZxid的Proposal
                 Iterator<Proposal> txnLogItr = db.getProposalsFromTxnLog(peerLastZxid, sizeLimit);
                 if (txnLogItr.hasNext()) {
                     LOG.info("Use txnlog and committedLog for peer sid: {}", getSid());
@@ -976,7 +977,7 @@ public class LearnerHandler extends ZooKeeperThread {
                         LOG.debug("Queueing committedLog 0x{}", Long.toHexString(currentZxid));
                         Iterator<Proposal> committedLogItr = db.getCommittedLog().iterator();
 
-                        // 再从committedLogItr把（currentZxid， null]的Proposal添加到queuedPackets中
+                        // 再从committedLogItr把（minCommittedLog， null]的Proposal添加到queuedPackets中
                         currentZxid = queueCommittedProposals(committedLogItr, currentZxid, null, maxCommittedLog);
                         needSnap = false;
                     }
@@ -1135,6 +1136,7 @@ public class LearnerHandler extends ZooKeeperThread {
                 "Sending TRUNC zxid=0x{}  for peer sid: {}",
                 Long.toHexString(lastCommittedZxid),
                 getSid());
+            //添加到队列中
             queueOpPacket(Leader.DIFF, lastCommittedZxid);
             needOpPacket = false;
         }
