@@ -1416,6 +1416,9 @@ public class Leader extends LearnerMaster {
                     if (zxid <= lastSeenZxid) {
                         continue;
                     }
+                    /**
+                     *  outstandingProposals.get(zxid).packet => new QuorumPacket(Leader.PROPOSAL, request.zxid, data, null);
+                     */
                     handler.queuePacket(outstandingProposals.get(zxid).packet);
 
                 }

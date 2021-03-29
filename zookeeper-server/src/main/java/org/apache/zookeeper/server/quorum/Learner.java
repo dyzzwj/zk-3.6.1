@@ -547,10 +547,16 @@ public class Learner {
                 self.setSyncMode(QuorumPeer.SyncMode.DIFF);
                 snapshotNeeded = false;
             } else if (qp.getType() == Leader.SNAP) {
+                /**
+                 * 快照同步
+                 */
                 self.setSyncMode(QuorumPeer.SyncMode.SNAP);
                 LOG.info("Getting a snapshot from leader 0x{}", Long.toHexString(qp.getZxid()));
                 // The leader is going to dump the database
                 // db is clear as part of deserializeSnapshot()
+                /**
+                 * 将leader发送过来的dump出的datatree进反序列化到learner的datatree
+                 */
                 zk.getZKDatabase().deserializeSnapshot(leaderIs);
                 // ZOOKEEPER-2819: overwrite config node content extracted
                 // from leader snapshot with local config, to avoid potential
@@ -627,6 +633,7 @@ public class Learner {
 
                     // 添加到packetsNotCommitted
                     // 还没有提交的packets
+                    //RequestProcessor还没初始化
                     packetsNotCommitted.add(pif); //
                     break;
                 case Leader.COMMIT:

@@ -579,7 +579,10 @@ public class LearnerHandler extends ZooKeeperThread {
             // Take any necessary action if we need to send TRUNC or DIFF
             // startForwarding() will be called in all cases
 
-            // 同步数据 peerLastZxid表示Follower节点中目前最近的zxid
+            /**
+             *   同步数据 peerLastZxid表示Follower节点中目前最近的zxid
+             *   这里只是把要同步的数据加到队列里了 还并没有发送给learner
+             */
             boolean needSnap = syncFollower(peerLastZxid, learnerMaster);
 
             // syncs between followers and the leader are exempt from throttling because it
@@ -607,6 +610,10 @@ public class LearnerHandler extends ZooKeeperThread {
                         syncThrottler.getSyncInProgress(),
                         exemptFromThrottle ? "exempt" : "not exempt");
                     // Dump data to peer
+
+                    /**
+                     * 如果需要进行快照同步 就把datatree里的数据dump出来发送给learner
+                     */
                     learnerMaster.getZKDatabase().serializeSnapshot(oa);   //
                     oa.writeString("BenWasHere", "signature");
                     bufferedOutput.flush();
@@ -835,7 +842,9 @@ public class LearnerHandler extends ZooKeeperThread {
          * always send DIFF if we have old enough history
          */
 
-        // peerLastZxid表示当前Learner中最近的zxid
+        /**
+         *  peerLastZxid表示当前Learner中最近的zxid
+         */
 
         // isPeerNewEpochZxid为true，表示peer是一台新服务器
         boolean isPeerNewEpochZxid = (peerLastZxid & 0xffffffffL) == 0;
@@ -885,21 +894,7 @@ public class LearnerHandler extends ZooKeeperThread {
                 maxCommittedLog = lastProcessedZxid;
             }
 
-            /*
-             * Here are the cases that we want to handle
-             *
-             * 1. Force sending snapshot (for testing purpose)
-             * 2. Peer and learnerMaster is already sync, send empty diff
-             * 3. Follower has txn that we haven't seen. This may be old leader
-             *    so we need to send TRUNC. However, if peer has newEpochZxid,
-             *    we cannot send TRUNC since the follower has no txnlog
-             * 4. Follower is within committedLog range or already in-sync.
-             *    We may need to send DIFF or TRUNC depending on follower's zxid
-             *    We always send empty DIFF if follower is already in-sync
-             * 5. Follower missed the committedLog. We will try to use on-disk
-             *    txnlog + committedLog to sync with follower. If that fail,
-             *    we will send snapshot
-             *
+            /**
              * 1. 强制快照同步
              * 2. Follower和Leader已经同步了，发送一个empty diff
              * 3. Follower上存在Leader上没有的txn（Follower比Leader新），表示leader的数据比较旧，发送TRUNC. 如果Follower是一个新服务器，不能发TRUNC，应为Follower节点上没有txn
@@ -977,7 +972,7 @@ public class LearnerHandler extends ZooKeeperThread {
                         LOG.debug("Queueing committedLog 0x{}", Long.toHexString(currentZxid));
                         Iterator<Proposal> committedLogItr = db.getCommittedLog().iterator();
 
-                        // 再从committedLogItr把（minCommittedLog， null]的Proposal添加到queuedPackets中
+                        // 再从committedLog中把（minCommittedLog， null]的Proposal添加到queuedPackets中
                         currentZxid = queueCommittedProposals(committedLogItr, currentZxid, null, maxCommittedLog);
                         needSnap = false;
                     }
