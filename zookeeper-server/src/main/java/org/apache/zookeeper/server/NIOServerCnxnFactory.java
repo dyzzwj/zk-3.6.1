@@ -489,6 +489,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
             touchCnxn(cnxn);
 
             // 处理workRequest 这里是把处理IO操作包装成任务进行提交 真正处理IO的是NIOServerCnxn.doIO
+            //单机和集群调度方式不一样
             workerPool.schedule(workRequest);
         }
 
@@ -723,7 +724,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
         } else {
             ss.socket().bind(addr, listenBacklog);
         }
-        //设置阻塞方式
+        //设置阻塞方式为非阻塞
         ss.configureBlocking(false);
         //创建处理accept事件的线程 会注册accept事件
         acceptThread = new AcceptThread(ss, addr, selectorThreads);

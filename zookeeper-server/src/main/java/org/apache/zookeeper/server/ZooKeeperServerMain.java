@@ -168,12 +168,12 @@ public class ZooKeeperServerMain {
             boolean needStartZKServer = true;
             if (config.getClientPortAddress() != null) {
                 // 默认拿到NIOServerCnxnFactory
-                //支持nio和netty两种模型
+                //支持nio和netty两种模型 默认是nio
                 cnxnFactory = ServerCnxnFactory.createFactory(); // NIOServerCnxnFactory
                 // 创建ServerSocketChannel bind地址和端口 创建accept线程 ServerSocketChannel注册accept事件
                 // 设置最大客户端连接限制数
                 cnxnFactory.configure(config.getClientPortAddress(), config.getMaxClientCnxns(), config.getClientPortListenBacklog(), false);
-                // 启动
+                // 启动  创建ServersocketChannel，绑定端口 创建接收连接的线程
                 cnxnFactory.startup(zkServer);
                 // zkServer has been started. So we don't need to start it again in secureCnxnFactory.
                 needStartZKServer = false;
