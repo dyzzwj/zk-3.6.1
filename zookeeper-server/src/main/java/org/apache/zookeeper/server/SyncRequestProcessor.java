@@ -145,10 +145,10 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
     }
 
     private boolean shouldSnapshot() {
-        //txnCount:当前这个日志文件flush的写请求数量
+        //txnCount:当前这个日志文件待flush的写请求数量
         //在调用zks.getZKDatabase().append(si)方法时会进行自增
         int logCount = zks.getZKDatabase().getTxnCount();  // log1.output txncount
-        //logSize:整个zkServer的日志数量
+        //logSize:整个zkServer的日志大小
         long logSize = zks.getZKDatabase().getTxnSize();  // log
         return (logCount > (snapCount / 2 + randRoll))
                || (snapSizeInBytes > 0 && logSize > (snapSizeInBytes / 2 + randSize));
@@ -230,8 +230,10 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                                          * //这里进行持久化操作会有一个问题（快照数据和request日志数据不一致）：
                                          * （对DataTree）打快照是在修改Datatree之前进行
                                          * 一个请求已经flush到request日志中了
-                                         *  但还没有被finalProcessorr处理（没有同步到(修改)DataTree） 此时将内存中的DataTree持久化到磁盘
-                                         *  但在下一次打快照时会
+                                         *  但还没有被finalProcessorr处理（没有同步到(修改)DataTree） 此时将内存中的DataTree持久化到磁盘，
+                                         *  没有同步到datatree的request在下一次打快照时才会在快照里
+                                         *  快照数据 要慢于 request日志数据
+                                         *
                                          *  zk会在重启的时候加载DataTree和request日志
                                          *  request日志命名规则：log. + 当前日志文件对应的第一个zxid对应的16进制
                                          *  快照日志命名规则：snapshot. + 当前日志文件对应的最后一个zxid对应的16进制
