@@ -481,6 +481,12 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
             // connection
             // 处理完一个key才去处理下一个key
             cnxn.disableSelectable();
+            /**
+             * public static final int OP_READ = 1;
+             * 	public static final int OP_WRITE = 4;
+             * 	public static final int OP_CONNECT = 8;
+             * 	public static final int OP_ACCEPT = 16
+             */
             key.interestOps(0);
 
             // 更新NIOServerCnxn上的时间，NIOServerCnxn也是一个对象，如果一直没有接收到数据（客户端一直没有发送数据和ping），

@@ -1336,7 +1336,7 @@ public class ClientCnxn {
                         //1000(1 second) is to prevent race condition missing to send the second ping
                         //also make sure not to send too many pings when readTimeout is small
 
-                        // clientCnxnSocket.getIdleSend()表示上一次发送数据的时间
+                        // clientCnxnSocket.getIdleSend()表示现在和上一次发送数据的时间的间隔
                         int timeToNextPing = readTimeout / 2
                                              - clientCnxnSocket.getIdleSend()
                                              - ((clientCnxnSocket.getIdleSend() > 1000) ? 1000 : 0);
