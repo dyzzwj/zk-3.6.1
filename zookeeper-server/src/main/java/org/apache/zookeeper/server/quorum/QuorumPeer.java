@@ -1321,7 +1321,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             /**
              * 创建QuorumCnxManager对象，Listener对象
              */
-            QuorumCnxManager qcm = createCnxnManager();  //
+            QuorumCnxManager qcm = createCnxnManager();
             QuorumCnxManager oldQcm = qcmRef.getAndSet(qcm);
             if (oldQcm != null) {
                 LOG.warn("Clobbering already-set QuorumCnxManager (restarting leader election?)");
@@ -2580,6 +2580,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     public QuorumCnxManager createCnxnManager() {
         int timeout = quorumCnxnTimeoutMs > 0 ? quorumCnxnTimeoutMs : this.tickTime * this.syncLimit;
         LOG.info("Using {}ms as the quorum cnxn socket timeout", timeout);
+        //构造方法中创建Listener对象
         return new QuorumCnxManager(
             this,
             this.getId(),
