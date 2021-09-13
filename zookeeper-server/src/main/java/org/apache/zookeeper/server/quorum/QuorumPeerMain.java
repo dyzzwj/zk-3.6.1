@@ -238,7 +238,7 @@ public class QuorumPeerMain {
                 quorumPeer.setJvmPauseMonitor(new JvmPauseMonitor(config));
             }
 
-            // quorumPeer是一个线程
+            // quorumPeer是一个线程  重写start()方法
             quorumPeer.start();
             ZKAuditProvider.addZKStartStopAuditLog();
 
