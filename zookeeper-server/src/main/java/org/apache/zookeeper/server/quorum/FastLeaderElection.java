@@ -737,7 +737,10 @@ public class FastLeaderElection implements Election {
                 self.getId(),
                 Long.toHexString(proposedEpoch));
 
-            // 把没张选票添加到发送队列中
+            /**
+             * 把每张选票添加到发送队列中
+             * 由WorkerSender线程把当前投票信息从sendqueue 挪到 SenderWorker的queueSendMap中sid对应的queue
+             */
             sendqueue.offer(notmsg);
         }
     }
@@ -1034,6 +1037,11 @@ public class FastLeaderElection implements Election {
                  * the termination time
                  */
                 // 要在0.2秒内得到投票
+                /**
+                 *  由WorkerReceiver 把 RecvWorker收到的选票信息(QuorumCnxManage.recvQueue) 挪到 当前recvqueue
+                 *
+                 *  获取其他节点的发送的选票
+                 */
                 Notification n = recvqueue.poll(notTimeout, TimeUnit.MILLISECONDS);
 
                 /*
@@ -1128,8 +1136,13 @@ public class FastLeaderElection implements Election {
                             Long.toHexString(n.zxid),
                             Long.toHexString(n.electionEpoch));
 
-                        // 通过一个HashMap来保存选票，投票箱里一台服务器只能有一张选票，所以n.sid做为key，方便更新
+
                         // don't care about the version if it's in LOOKING state
+                        /**
+                         * 通过一个HashMap来保存选票，投票箱里一台服务器只能有一张选票，所以n.sid做为key，方便更新
+                         *  k - 接收到的选票的节点
+                         *  v - 接收到的选票要投给的那个节点
+                         */
                         recvset.put(n.sid, new Vote(n.leader, n.zxid, n.electionEpoch, n.peerEpoch));
 
 
