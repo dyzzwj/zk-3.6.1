@@ -207,6 +207,9 @@
               <includes>
                 <include>org/apache/zookeeper/version/**/*.java</include>
               </includes>
+              <source>1.8</source>
+              <target>1.8</target>
+              <encoding>UTF-8</encoding>
             </configuration>
             <goals>
               <goal>compile</goal>

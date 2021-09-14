@@ -524,7 +524,7 @@ public class QuorumCnxManager {
         }
 
         // If lost the challenge, then drop the new connection
-        // 对方的sid比自己的id大，则关闭socket,否则关闭连接
+        // 对方的sid比自己的id大，则关闭socket,关闭连接
         // 只能大的sid连小的sid，现在这个方法是主动发起建立socket连接的一方，所以self.getId应该要比sid大
         if (sid > self.getId()) {
             LOG.info("Have smaller server identifier, so dropping the connection: (myId:{} --> sid:{})", self.getId(), sid);

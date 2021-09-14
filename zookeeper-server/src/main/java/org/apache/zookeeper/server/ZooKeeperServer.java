@@ -1645,7 +1645,11 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         // to the start of the txn
         incomingBuffer = incomingBuffer.slice();
 
-        // 处理addAuth命令，把auth信息添加到ServerCnxn中 // ACl create /xx/node
+        /**
+         *   不重要
+         *  处理addAuth命令，把auth信息添加到ServerCnxn中
+         */
+        //  // ACl create /xx/node
         if (h.getType() == OpCode.auth) {   // addAuth xx
             // addAuth
             LOG.info("got auth packet {}", cnxn.getRemoteSocketAddress());
@@ -1694,7 +1698,9 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         } else if (h.getType() == OpCode.sasl) {
             processSasl(incomingBuffer, cnxn, h);
         } else {
-            // 处理增删查改的命令
+            /**
+             * 处理增删查改的命令
+             */
             // create delete set
 
             // 需要验证，但是没有验证
@@ -1720,7 +1726,9 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                 }
                 si.setOwner(ServerCnxn.me);
 
-                // 使用requestThrottler来处理请求，requestThrottler表示限流
+                /**
+                 * 使用requestThrottler来处理请求，requestThrottler表示限流
+                 */
                 submitRequest(si);
             }
         }

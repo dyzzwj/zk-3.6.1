@@ -67,6 +67,7 @@
       <module>luban-vip</module>
   </modules>
 
+
   <scm>
     <connection>scm:git:https://gitbox.apache.org/repos/asf/zookeeper.git</connection>
     <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/zookeeper.git</developerConnection>

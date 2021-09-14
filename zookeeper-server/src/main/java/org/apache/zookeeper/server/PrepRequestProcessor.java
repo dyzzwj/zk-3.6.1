@@ -725,6 +725,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
         // children的cversion    1
         int parentCVersion = parentRecord.stat.getCversion();
 
+        //是否是有序节点
         if (createMode.isSequential()) {
             //
             path = path + String.format(Locale.ENGLISH, "%010d", parentCVersion);
