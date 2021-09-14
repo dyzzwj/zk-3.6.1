@@ -459,8 +459,10 @@ public class Leader extends LearnerMaster {
 
                 ExecutorService executor = Executors.newFixedThreadPool(serverSockets.size());
                 CountDownLatch latch = new CountDownLatch(serverSockets.size());
-
-                // 开启一个线程监听socket连接，线程类LearnerCnxAcceptorHandler
+                /**
+                 * 当前机器用来和Follower节点进行socket连接的地址可能有多个
+                 *  每个连接地址开启一个线程监听socket连接，线程类LearnerCnxAcceptorHandler
+                 */
                 serverSockets.forEach(serverSocket ->
                         executor.submit(new LearnerCnxAcceptorHandler(serverSocket, latch)));
 
@@ -522,7 +524,7 @@ public class Leader extends LearnerMaster {
                 Socket socket = null;
                 boolean error = false;
                 try {
-                    // Follower
+                    // 阻塞接受Follower的连接
                     socket = serverSocket.accept();  //
 
                     // start with the initLimit, once the ack is processed
@@ -1520,7 +1522,11 @@ public class Leader extends LearnerMaster {
             }
             QuorumVerifier verifier = self.getQuorumVerifier();
 
-            // connectingFollowers表示参与者，只要超过一半的参与者进行了epoch的协商，就确定了新epoch了
+
+            /**
+             * 每个LearnerHandler（Follower）都会进行过半机制验证
+             * connectingFollowers表示参与者，只要超过一半的参与者进行了epoch的协商，就确定了新epoch了
+             */
             if (connectingFollowers.contains(self.getId()) && verifier.containsQuorum(connectingFollowers)) {
                 waitingForNewEpoch = false;
                 // 设置leader的acceptedEpoch，写入文件，表示本届领导的epoch
@@ -1587,6 +1593,7 @@ public class Leader extends LearnerMaster {
                 long cur = start;
                 long end = start + self.getInitLimit() * self.getTickTime();
                 while (!electionFinished && cur < end) {
+                    //阻塞
                     electingFollowers.wait(end - cur);
                     cur = Time.currentElapsedTime();
                 }
