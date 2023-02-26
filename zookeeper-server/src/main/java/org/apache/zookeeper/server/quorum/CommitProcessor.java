@@ -238,7 +238,8 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                     synchronized (this) {
                         while (!stopped && requestsToProcess == 0 && !commitIsWaiting) {
                             /**
-                             * 阻塞 queuedRequests添加了数据或者committedRequests添加了数据 会解阻塞
+                             * 阻塞  queuedRequests添加了数据或者committedRequests添加了数据
+                             * CommitProcessor#processRequest()会解阻塞
                              */
                             wait();
 
@@ -290,7 +291,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                      *
                      * pendingRequests：某个session中需要执行的请求 按顺序存放
                      * 1、如果这个请求是读请求，但是这个请求对应的session在之前有还没提交的写请求，那么该读请求也得加到pendingRequests
-                     *                        如果这个请求是对应的session的还未处理的请求中的第一个请求 直接交给nextProcessor处理
+                     *    如果这个请求是对应的session的还未处理的请求中的第一个请求（pendingRequests不包含request.sessionId） 直接交给nextProcessor处理
                      * 2、写请求 直接添加到pendingRequests中
                      *
                      *
@@ -307,7 +308,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                         requests.addLast(request);
                         ServerMetrics.getMetrics().REQUESTS_IN_SESSION_QUEUE.add(requests.size());
                     } else {
-                        // 如果不是写请求，并且这个请求是发送该请求的session的还未处理的请求中的第一个请求，就可以直接调用nextProcessor处理
+                        // 如果不是写请求，并且这个请求是发送该请求的session的还未处理的请求中的第一个请求（pendingRequests不包含request.sessionId），就可以直接调用nextProcessor处理
                         readsProcessed++; // 读请求数量+1
                         numReadQueuedRequests.decrementAndGet();
                         // 内部是把这个请求交给sessionId对应的线程池进行处理的
@@ -391,6 +392,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                          */
                         // committedRequests中的请求是其他服务器触发的，所以要和我本地保存的写请求顺序一致
                         //接受到的写请求的顺序应该和我处理的写请求的顺序保持一致
+                        //接收到的写请求的数据 必须和 两阶段提交完成的顺序一致？？
                         if (!queuedWriteRequests.isEmpty()
                             && queuedWriteRequests.peek().sessionId == request.sessionId
                             && queuedWriteRequests.peek().cxid == request.cxid) {
