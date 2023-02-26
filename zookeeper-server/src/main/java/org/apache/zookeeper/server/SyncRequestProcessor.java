@@ -257,7 +257,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
 
                     /**  toFlush中会有读请求和写请求
                      * 如果是读请求 并且toFlush为空 那么可以直接调用finalProcessor处理读请求
-                     *  如果toFlush不为空，有可能有读请求 此时就不能直接调用finalProcessor，因为DataTree中的数据不是最新的
+                     *  如果toFlush不为空，有可能有写请求 此时就不能直接调用finalProcessor，因为DataTree中的数据不是最新的
                      *  toFlush相当于缓存
                      *
                      */
@@ -283,7 +283,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                     continue;
                 }
 
-                // 把当前请求添加到待flush队列中
+                // 把当前读请求添加到待flush队列中
                 toFlush.add(si);  // 写 读
 
                 // 判断是否可以Flush了
@@ -318,7 +318,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
         if (this.nextProcessor == null) {
             this.toFlush.clear();
         } else {
-            // 把toFlush队列中的Reqeust获取出来，并调用nnextProcessor
+            // 把toFlush队列中的Reqeust获取出来，并调用nextProcessor
             while (!this.toFlush.isEmpty()) {    // log.1  output
                 // 把toFlush中的请求交给nextProcessor
                 final Request i = this.toFlush.remove();

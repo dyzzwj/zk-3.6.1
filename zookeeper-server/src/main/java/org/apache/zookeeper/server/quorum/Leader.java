@@ -1227,6 +1227,10 @@ public class Leader extends LearnerMaster {
         synchronized (this) {
             lastCommitted = zxid;
         }
+        /**
+         *  COMMIT：两阶段的commit
+         *   follower处理请求：Follower#processPacket()
+         */
         QuorumPacket qp = new QuorumPacket(Leader.COMMIT, zxid, null, null);
         sendPacket(qp);
         ServerMetrics.getMetrics().COMMIT_COUNT.add(1);
@@ -1316,7 +1320,7 @@ public class Leader extends LearnerMaster {
 
         byte[] data = SerializeUtils.serializeRequest(request);
         proposalStats.setLastBufferSize(data.length);
-        // 针对当前Leader接收到的请求，发起两阶段提交中的第一阶段
+        // PROPOSAL：针对当前Leader接收到的请求，发起两阶段提交中的第一阶段
         QuorumPacket pp = new QuorumPacket(Leader.PROPOSAL, request.zxid, data, null);
 
         Proposal p = new Proposal();

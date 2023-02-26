@@ -348,6 +348,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
         case OpCode.create2:
         case OpCode.createTTL:
         case OpCode.createContainer: {
+            //处理create请求
             pRequest2TxnCreate(type, request, record, deserialize);
             break;
         }
@@ -741,7 +742,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements Req
             // ignore this one
         }
 
-        // 父节点是不是一个临时节点
+        // 父节点是不是一个临时节点  临时节点不能创建子节点
         boolean ephemeralParent = EphemeralType.get(parentRecord.stat.getEphemeralOwner()) == EphemeralType.NORMAL;
         if (ephemeralParent) {
             throw new KeeperException.NoChildrenForEphemeralsException(path);

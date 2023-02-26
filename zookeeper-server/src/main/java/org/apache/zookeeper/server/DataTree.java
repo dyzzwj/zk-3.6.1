@@ -539,9 +539,10 @@ public class DataTree {
             nodeDataSize.addAndGet(getNodeSize(path, child.data));
             nodes.put(path, child);
 
-            //
+            //节点类型
             EphemeralType ephemeralType = EphemeralType.get(ephemeralOwner);
             if (ephemeralType == EphemeralType.CONTAINER) {
+                //容器节点
                 containers.add(path);
             } else if (ephemeralType == EphemeralType.TTL) {
                 ttls.add(path);

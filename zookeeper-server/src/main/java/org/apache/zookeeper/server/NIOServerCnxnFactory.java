@@ -185,6 +185,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
             this.acceptSocket = ss;
             //向ServerSocketChannel注册accept事件
             this.acceptKey = acceptSocket.register(selector, SelectionKey.OP_ACCEPT);
+            //出路读写事件的线程
             this.selectorThreads = Collections.unmodifiableList(new ArrayList<SelectorThread>(selectorThreads));
             selectorIterator = this.selectorThreads.iterator();
         }
@@ -496,6 +497,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
 
             // 处理workRequest 这里是把处理IO操作包装成任务进行提交 真正处理IO的是NIOServerCnxn.doIO
             //单机和集群调度方式不一样
+            //WorkerService.schedule()
             workerPool.schedule(workRequest);
         }
 
@@ -732,7 +734,10 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
         }
         //设置阻塞方式为非阻塞
         ss.configureBlocking(false);
-        //创建处理accept事件的线程 会注册accept事件
+        /**
+         * 创建处理accept事件的线程 会注册accept事件  acceptThread保存有selectorThreads的引用
+         *  AcceptThread负责接收accept事件 selectorThreads负责处理读写事件
+         */
         acceptThread = new AcceptThread(ss, addr, selectorThreads);
     }
 
@@ -834,6 +839,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
             // 4. 注册jmx
             // 5. 修改为RUNNING状态
             // 6. notifyAll(), 因为上面的步骤中会启动线程，那些线程在运行的过程中如果发现一些其他的前置条件还没有满足，则会wait，而此处就会notify
+            //ZooKeeperServer.startup
             zks.startup();
         }
     }

@@ -182,6 +182,10 @@ public class Follower extends Learner {
             ping(qp);
             break;
         case Leader.PROPOSAL:
+            /**
+             *  leader接收到写请求后，发出提议ProposalRequestProcessor#processRequest()
+             *  prepare：两阶段提交的第一步
+             */
             ServerMetrics.getMetrics().LEARNER_PROPOSAL_RECEIVED_COUNT.add(1);
             TxnLogEntry logEntry = SerializeUtils.deserializeTxn(qp.getData());
             TxnHeader hdr = logEntry.getHeader();
@@ -219,6 +223,7 @@ public class Follower extends Learner {
             }
             if (om != null) {
                 final long startTime = Time.currentElapsedTime();
+                //添加到提议队列
                 om.proposalReceived(qp);
                 ServerMetrics.getMetrics().OM_PROPOSAL_PROCESS_TIME.add(Time.currentElapsedTime() - startTime);
             }

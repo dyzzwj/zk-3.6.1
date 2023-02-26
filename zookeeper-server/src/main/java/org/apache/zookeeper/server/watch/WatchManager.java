@@ -164,7 +164,7 @@ public class WatchManager implements IWatchManager {
                     WatcherMode watcherMode = watcherModeManager.getWatcherMode(watcher, localPath);
                     // 如果Watcher是递归的
                     if (watcherMode.isRecursive()) {
-                        // 当前触发的事件不是NodeChildrenChanged就能触发递归Watcher
+                        // 当前触发的事件不是NodeChildrenChanged，就能触发递归Watcher
                         // 那么也就是说，一个节点的孩子节点被删除了，是不会触发递归Watcher的
                         if (type != EventType.NodeChildrenChanged) {
                             watchers.add(watcher);

@@ -410,6 +410,9 @@ public class FinalRequestProcessor implements RequestProcessor {
                         cnxn);
                 break;
             }
+            /**
+             * 添加watch
+             */
             case OpCode.addWatch: {
                 lastOp = "ADDW";
                 AddWatchRequest addWatcherRequest = new AddWatchRequest();

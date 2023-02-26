@@ -73,6 +73,7 @@ public class FollowerRequestProcessor extends ZooKeeperCriticalThread implements
                 // the request to the leader so that we are ready to receive
                 // the response
                 // 当Follower节点接收到一个请求时，先把这个请求加入到队列中进行等待
+                //CommitProcessor.processRequest
                 nextProcessor.processRequest(request);
 
                 // We now ship the request to the leader. As with all
