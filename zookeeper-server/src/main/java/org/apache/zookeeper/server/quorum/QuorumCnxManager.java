@@ -154,7 +154,6 @@ public class QuorumCnxManager {
     private AtomicInteger connectionThreadCnt = new AtomicInteger(0);
 
     /**
-     * Mapping from Peer to Thread number
      * 为其他的每个节点单独开启一个线程SendWorker来发送数据
      * key是serverId  SendWorker负责发送serverId相同的queueSendMap的队列中的数据
      */
@@ -629,6 +628,8 @@ public class QuorumCnxManager {
                 sid = protocolVersion;
             } else {
                 try {
+
+                    //读取数据
                     InitialMessage init = InitialMessage.parse(protocolVersion, din);
                     sid = init.sid;
                     if (!init.electionAddr.isEmpty()) {
@@ -673,6 +674,10 @@ public class QuorumCnxManager {
              * up, so we have to shut down the workers before trying to open a
              * new connection.
              */
+            /**
+             * senderWorkerMap：为其他的每个节点单独开启一个线程SendWorker来发送数据
+             * key是serverId  SendWorker负责发送serverId相同的queueSendMap的队列中的数据
+             */
             SendWorker sw = senderWorkerMap.get(sid);
             if (sw != null) {
                 sw.finish();
@@ -697,6 +702,8 @@ public class QuorumCnxManager {
             LOG.warn("We got a connection request from a server with our own ID. "
                      + "This should be either a configuration error, or a bug.");
         } else { // Otherwise start worker threads to receive data.
+
+            //对方的id大于我的id
             SendWorker sw = new SendWorker(sock, sid);
             RecvWorker rw = new RecvWorker(sock, din, sid, sw);
             sw.setRecv(rw);
@@ -707,6 +714,9 @@ public class QuorumCnxManager {
                 vsw.finish();
             }
 
+            /**
+             *  为对方创建SendWorker和RecvWorker  用于接受对方领导者选举过程发送的数据
+             */
             senderWorkerMap.put(sid, sw);
 
             queueSendMap.putIfAbsent(sid, new CircularBlockingQueue<>(SEND_CAPACITY));
@@ -741,7 +751,10 @@ public class QuorumCnxManager {
              * Start a new connection if doesn't have one already.
              */
             BlockingQueue<ByteBuffer> bq = queueSendMap.computeIfAbsent(sid, serverId -> new CircularBlockingQueue<>(SEND_CAPACITY));
-            // 把选票数据添加到queueSendMap中sid对应的队列
+
+            /**
+             * 把选票数据添加到queueSendMap中sid对应的队列，SendWorker从queueSendMap中取选票发给其他节点
+             */
             addToSendQueue(bq, b);
             // 如果没有建立连接就会去连接其他服务器
             connectOne(sid);

@@ -347,7 +347,7 @@ public class FastLeaderElection implements Election {
                          * If it is from a non-voting server (such as an observer or
                          * a non-voting follower), respond right away.
                          */
-                        // 发送这张选票的sid是不是一个投票者，把本服务器当前投给谁响应回去
+                        // 发送这张选票的sid不是一个投票者（是Observer），把本服务器当前投给谁响应回去
                         if (!validVoter(response.sid)) { // Observer
                             Vote current = self.getCurrentVote();
                             QuorumVerifier qv = self.getQuorumVerifier();
@@ -416,7 +416,12 @@ public class FastLeaderElection implements Election {
 
                             // 当前接收选票的服务器是LOOKING状态
                             if (self.getPeerState() == QuorumPeer.ServerState.LOOKING) {
-                                // 添加到recvqueue
+                                /**
+                                 * 添加到recvqueue
+                                 * 注意 这个recvqueue不是WorkerReceiver和RecvWorker使用的recvqueue
+                                 * WorkerReceiver和RecvWorker使用的recvqueue是QuorumCnxManager里的recvqueue
+                                 * 当前这个recvqueue是leader选举过程中用到的  有效的选票  在lookForLeader方法中会用到
+                                 */
                                 recvqueue.offer(n);
 
                                 /*
@@ -996,7 +1001,7 @@ public class FastLeaderElection implements Election {
                 // 选举的时钟周期+1
                 /**
                  * 	logicalclock即electionEpoch，即选举轮次，在进行投票结果赛选的时候需要保证大家在一个投票轮次 每次重启时都会归零
-                 * 	getPeerEpoch()：即epoch 会进行持久化 每个节点启动都会投自己 投自己的时候用的是epoch(持久化的)时
+                 * 	getPeerEpoch()：即epoch 会进行持久化 每个节点启动都会投自己 投自己的时候用的是epoch(持久化的)
                  * 	此时electionEpoch会自增至0  后续其他节点接收到投自己的选票时 其实比较的是epoch（因为都会投自己） 而不是electionEpoch
                  *
                  */

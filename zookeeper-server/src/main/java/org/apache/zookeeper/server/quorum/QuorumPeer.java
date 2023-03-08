@@ -1108,7 +1108,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         startLeaderElection();
 
         startJvmPauseMonitor();
-        // 启动线程，执行run方法F
+        // 启动线程，执行run方法
         super.start();
     }
 
